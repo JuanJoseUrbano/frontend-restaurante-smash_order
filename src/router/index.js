@@ -1,5 +1,6 @@
 import AboutView from "@/views/General/AboutView.vue";
 import HomeView from "@/views/General/HomeView.vue";
+import Login from "@/views/General/Login.vue";
 import SignIn from "@/views/General/SignIn.vue";
 import Categories from "@/views/Products/Categories.vue";
 import Products from "@/views/Products/Products.vue";
@@ -11,6 +12,7 @@ const routes = [
   { path: "/home", name: "Home", component: HomeView },
   { path: "/about", name: "About", component: AboutView },
   { path: "/signin", name: "Signin", component: SignIn },
+  { path: "/login", name: "LogIn", component: Login },
   { path: "/dashboard-products", name: "Products", component: Products },
   { path: "/dashboard-categories", name: "Categories", component: Categories },
   { path: "/dashboard-tables", name: "Tables", component: Tables },
