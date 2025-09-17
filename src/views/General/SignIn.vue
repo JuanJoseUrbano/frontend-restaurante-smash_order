@@ -40,14 +40,14 @@
               <input
                 type="text"
                 id="usuario"
-                v-model="user.username"
+                v-model="user.userName"
                 required
                 placeholder="Ej: lmartinez"
                 class="form-input"
               />
-              <small class="input-hint"
-                >Mínimo 6 caracteres, sin espacios</small
-              >
+              <small class="input-hint">
+                Mínimo 6 caracteres, sin espacios
+              </small>
             </div>
             <div class="form-group">
               <label for="contrasenia">Contraseña*</label>
@@ -92,7 +92,7 @@
               <input
                 type="email"
                 id="correo"
-                v-model="user.correo"
+                v-model="user.email"
                 required
                 placeholder="Ej: ejemplo@mail.com"
                 class="form-input"
@@ -117,9 +117,9 @@
         <!-- Enlace a Login -->
         <p class="login-link">
           ¿Ya tienes una cuenta?
-          <router-link to="/login" class="login-redirect"
-            >Inicia Sesión</router-link
-          >
+          <router-link to="/login" class="login-redirect">
+            Inicia Sesión
+          </router-link>
         </p>
       </form>
     </div>
@@ -127,17 +127,23 @@
 </template>
 
 <script>
+import axios from "axios";
+import { mostrarAlerta } from "@/functions";
+
 export default {
   name: "RegisterPage",
   data() {
     return {
+      urlApi: "http://localhost:8080/smash-order/api/",
       user: {
+        id: "",
         name: "",
-        username: "",
+        userName: "",
+        email: "",
         password: "",
-        correo: "",
       },
       showPassword: false,
+      acceptTerms: false,
       isSubmitting: false,
     };
   },
@@ -145,8 +151,8 @@ export default {
     isFormValid() {
       return (
         this.user.name.trim() &&
-        this.user.username.trim() &&
-        this.user.correo.trim() &&
+        this.user.userName.trim() &&
+        this.user.email.trim() &&
         this.user.password.trim()
       );
     },
@@ -156,22 +162,14 @@ export default {
       this.showPassword = !this.showPassword;
     },
     async completarRegistro() {
-      this.isSubmitting = true;
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        console.log("Datos enviados:", this.user);
-        alert("¡Registro exitoso!");
-        alert(
-          "Nombre: " +
-            this.user.name +
-            "\nUsuario: " +
-            this.user.username +
-            "\nCorreo: " +
-            this.user.correo
-        );
+        this.isSubmitting = true;
+
+        await axios.post(this.urlApi + "users", this.user);
+        mostrarAlerta("Usuario registrado exitosamente", "success");
+        this.$router.push("/login");
       } catch (error) {
-        console.error("Error en registro:", error);
-        alert("Error en el registro. Intenta nuevamente.");
+        mostrarAlerta("Error en el registro. Intenta nuevamente.", "danger");
       } finally {
         this.isSubmitting = false;
       }
@@ -179,6 +177,7 @@ export default {
   },
 };
 </script>
+
 
 <style>
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css");

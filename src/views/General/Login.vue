@@ -4,7 +4,7 @@
       <img
         class="logo"
         src="@/assets/logo_smash_order.png"
-        alt="Hotel El Paraíso"
+        alt="SmashOrder Logo"
       />
       <h2>Iniciar Sesión</h2>
       <form @submit.prevent="login">
@@ -14,9 +14,12 @@
         </div>
         <div class="form-group">
           <label for="password">Contraseña:</label>
-          <input type="password" id="password" v-model="contrasenia" required />
+          <input type="password" id="password" v-model="password" required />
         </div>
-        <button type="submit" class="btn-login">Ingresar</button>
+        <button type="submit" class="btn-login" :disabled="isSubmitting">
+          <span v-if="!isSubmitting">Ingresar</span>
+          <span v-else>Cargando...</span>
+        </button>
       </form>
       <p class="register-text">
         ¿No tienes cuenta?
@@ -29,38 +32,71 @@
 </template>
 
 <script>
+import axios from "axios";
+import { mostrarAlerta } from "@/functions";
+
 export default {
   name: "LoginPage",
   data() {
     return {
       usuario: "",
-      contrasenia: "",
-      // Datos de usuario simulados en memoria
-      usuariosSimulados: [
-        { usuario: "admin", contrasenia: "Admin123!" },
-        { usuario: "lmartinez", contrasenia: "Segura123!" },
-      ],
+      password: "",
+      isSubmitting: false,
     };
   },
   methods: {
-    login() {
-      const usuarioValido = this.usuariosSimulados.find(
-        (u) => u.usuario === this.usuario && u.contrasenia === this.contrasenia
-      );
+    async login() {
+      this.isSubmitting = true;
+      try {
+        const payload = {
+          usuario: this.usuario,
+          password: this.password,
+        };
 
-      if (usuarioValido) {
-        // Guardamos la sesión en localStorage
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("username", this.usuario);
-        alert(`¡Bienvenido ${this.usuario}!`);
-        this.$router.push("/dashboard-products"); // Redirige al dashboard
-      } else {
-        alert("Usuario o contraseña incorrectos");
+        const response = await axios.post(
+          "http://localhost:8080/smash-order/api/users/login",
+          payload
+        );
+
+        if (response.status === 200) {
+          // Guardamos sesión en localStorage
+          localStorage.setItem("isAuthenticated", "true");
+          localStorage.setItem("username", this.usuario);
+
+          mostrarAlerta("Inicio de sesión exitoso", "success");
+          this.$router.push("/dashboard-products");
+        }
+      } catch (error) {
+        if (error.response) {
+          if (error.response.status === 401) {
+            mostrarAlerta(
+              "Error al iniciar sesión",
+              "warning",
+              "Usuario o contraseña incorrectos"
+            );
+          } else {
+            mostrarAlerta(
+              "Error inesperado",
+              "danger",
+              "Código: " + error.response.status
+            );
+          }
+        } else {
+          mostrarAlerta(
+            "Error al iniciar sesión",
+            "danger",
+            "Servidor caído o sin conexión"
+          );
+        }
+        console.error("Error en login:", error);
+      } finally {
+        this.isSubmitting = false;
       }
     },
   },
 };
 </script>
+
 
 <style>
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css");
@@ -90,7 +126,7 @@ export default {
 }
 
 .login-box {
-  background-color: var(--background-light);
+  background-color: white;
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(88, 14, 0, 0.15);
   width: 100%;
