@@ -1,10 +1,10 @@
-import AboutView from "@/views/General/AboutView.vue";
-import HomeView from "@/views/General/HomeView.vue";
-import Login from "@/views/General/Login.vue";
-import SignIn from "@/views/General/SignIn.vue";
-import Categories from "@/views/Products/Categories.vue";
-import Products from "@/views/Products/Products.vue";
-import Tables from "@/views/Tables/Tables.vue";
+import AboutView from "@/views/AboutView.vue";
+import HomeView from "@/views/HomeView.vue";
+import Login from "@/views/Login.vue";
+import SignIn from "@/views/SignIn.vue";
+import Categories from "@/views/Categories.vue";
+import Products from "@/views/Products.vue";
+import Tables from "@/views/Tables.vue";
 import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [

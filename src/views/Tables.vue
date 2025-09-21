@@ -51,60 +51,60 @@
       </div>
     </div>
 
-<!-- TABLA MESAS -->
-<div class="mesas-table-container shadow-sm">
-  <div v-if="cargando" class="loading-spinner">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Cargando...</span>
+    <!-- TABLA MESAS -->
+    <div class="mesas-table-container shadow-sm">
+      <div v-if="cargando" class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p>Cargando Mesas...</p>
+      </div>
+
+      <div v-else-if="mesas.length === 0" class="empty-state">
+        <i class="fas fa-chair empty-icon"></i>
+        <h4>No hay mesas registradas</h4>
+        <p>Agrega una mesa para empezar</p>
+      </div>
+
+      <div v-else class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th class="text-center">#</th>
+              <th class="text-center">Número</th>
+              <th class="text-center">Capacidad</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="m in mesas" :key="m.id" class="mesa-row">
+              <td class="text-center">{{ m.id }}</td>
+              <td class="text-center mesa-numero">{{ m.number }}</td>
+              <td class="text-center mesa-capacidad">{{ m.capacity }}</td>
+              <td class="text-center">
+                <span :class="['badge fs-6',
+                  m.status === 'AVAILABLE' ? 'bg-success' :
+                    m.status === 'OCCUPIED' ? 'bg-danger' :
+                      'bg-warning']">
+                  {{ m.status }}
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="action-buttons">
+                  <button class="btn btn-sm btn-outline-warning me-2" @click="obtenerPorId(m.id)">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button @click="eliminarMesa(m.id)" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <p>Cargando Mesas...</p>
-  </div>
-
-  <div v-else-if="mesas.length === 0" class="empty-state">
-    <i class="fas fa-chair empty-icon"></i>
-    <h4>No hay mesas registradas</h4>
-    <p>Agrega una mesa para empezar</p>
-  </div>
-
-  <div v-else class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th class="text-center">#</th>
-          <th class="text-center">Número</th>
-          <th class="text-center">Capacidad</th>
-          <th class="text-center">Estado</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="m in mesas" :key="m.id" class="mesa-row">
-          <td class="text-center">{{ m.id }}</td>
-          <td class="text-center mesa-numero">{{ m.number }}</td>
-          <td class="text-center mesa-capacidad">{{ m.capacity }}</td>
-          <td class="text-center">
-            <span :class="['badge fs-6',
-              m.status === 'AVAILABLE' ? 'bg-success' :
-              m.status === 'OCCUPIED' ? 'bg-danger' :
-              'bg-warning']">
-              {{ m.status }}
-            </span>
-          </td>
-          <td class="text-center">
-            <div class="action-buttons">
-              <button class="btn btn-sm btn-outline-warning me-2" @click="obtenerPorId(m.id)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button @click="eliminarMesa(m.id)" class="btn btn-sm btn-outline-danger">
-                <i class="fas fa-trash-alt"></i>
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
 
     <!-- Modal Agregar -->
     <div class="modal fade" id="modalGuardarMesa" tabindex="-1" aria-hidden="true">
@@ -173,26 +173,24 @@
 
 <script>
 import { mostrarAlerta, confirmar } from '@/functions.js';
-import axios from 'axios';
 import Modal from 'bootstrap/js/dist/modal';
+import {
+  getTables,
+  getTableByNumber,
+  getTablesByStatus,
+  getTableById,
+  createTable,
+  updateTable,
+  deleteTable
+} from '@/services/tables.js';
 
 export default {
   name: 'GestionMesas',
   data() {
     return {
-      urlApi: 'http://localhost:8080/smash-order/api/tables',
       mesas: [],
-      mesaNueva: {
-        number: 0,
-        capacity: 0,
-        status: 'AVAILABLE'
-      },
-      mesaEditada: {
-        id: 0,
-        number: 0,
-        capacity: 0,
-        status: ''
-      },
+      mesaNueva: { number: 0, capacity: 0, status: 'AVAILABLE' },
+      mesaEditada: { id: 0, number: 0, capacity: 0, status: '' },
       cargando: false,
       modalAgregar: null,
       modalEditar: null,
@@ -209,8 +207,7 @@ export default {
     async obtenerMesas() {
       this.cargando = true;
       try {
-        const res = await axios.get(this.urlApi);
-        this.mesas = res.data;
+        this.mesas = await getTables();
       } catch {
         mostrarAlerta('Error al cargar las mesas', 'danger');
       } finally {
@@ -221,8 +218,8 @@ export default {
     async buscarPorNumero() {
       if (!this.filtroNumero) return this.obtenerMesas();
       try {
-        const res = await axios.get(`${this.urlApi}/number/${this.filtroNumero}`);
-        this.mesas = [res.data];
+        const mesa = await getTableByNumber(this.filtroNumero);
+        this.mesas = [mesa];
       } catch {
         mostrarAlerta('Mesa no encontrada', 'warning');
       }
@@ -231,8 +228,7 @@ export default {
     async filtrarPorEstado() {
       if (!this.filtroEstado) return this.obtenerMesas();
       try {
-        const res = await axios.get(`${this.urlApi}/status/${this.filtroEstado}`);
-        this.mesas = res.data;
+        this.mesas = await getTablesByStatus(this.filtroEstado);
       } catch {
         mostrarAlerta('Error al filtrar por estado', 'danger');
       }
@@ -246,7 +242,7 @@ export default {
 
     async guardarMesa() {
       try {
-        await axios.post(this.urlApi, this.mesaNueva);
+        await createTable(this.mesaNueva);
         this.mesaNueva = { number: 0, capacity: 0, status: 'AVAILABLE' };
         mostrarAlerta('Mesa guardada exitosamente', 'success');
         this.obtenerMesas();
@@ -258,8 +254,7 @@ export default {
 
     async obtenerPorId(id) {
       try {
-        const res = await axios.get(`${this.urlApi}/${id}`);
-        this.mesaEditada = res.data;
+        this.mesaEditada = await getTableById(id);
         this.modalEditar.show();
       } catch {
         mostrarAlerta('Error al obtener la mesa', 'danger');
@@ -268,7 +263,7 @@ export default {
 
     async actualizarMesa() {
       try {
-        await axios.put(`${this.urlApi}/${this.mesaEditada.id}`, this.mesaEditada);
+        await updateTable(this.mesaEditada);
         mostrarAlerta('Mesa actualizada correctamente', 'success');
         this.obtenerMesas();
         this.modalEditar.hide();
@@ -279,15 +274,26 @@ export default {
 
     async eliminarMesa(id) {
       try {
-        confirmar(`${this.urlApi}/${id}`, 'Eliminar mesa', '¿Estás seguro de eliminar esta mesa?');
-        this.obtenerMesas();
-      } catch {
-        mostrarAlerta('Error al eliminar la mesa', 'danger');
+        const confirmado = await confirmar(
+          "Eliminar mesa",
+          "¿Estás seguro de eliminar esta mesa?"
+        );
+        if (confirmado) {
+          await deleteTable(id);
+          mostrarAlerta("Mesa eliminada correctamente", "success");
+          this.obtenerMesas();
+        } else {
+          mostrarAlerta("Operación cancelada", "info");
+        }
+      } catch (error) {
+        mostrarAlerta("Error al eliminar la mesa", "danger");
       }
     }
+
   }
 };
 </script>
+
 
 <style>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');

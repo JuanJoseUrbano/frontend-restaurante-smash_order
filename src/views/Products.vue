@@ -166,56 +166,81 @@
 
 
 <script>
-import { mostrarAlerta, confirmar } from '@/functions.js';
-import axios from 'axios';
-import Modal from 'bootstrap/js/dist/modal';
+import { mostrarAlerta, confirmar } from "@/functions.js";
+import Modal from "bootstrap/js/dist/modal";
+
+import {
+  getProducts,
+  getProductById,
+  searchProducts,
+  filterByCategory,
+  filterByPrice,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "@/services/products";
+
+import { getCategories } from "@/services/categories";
 
 export default {
-  name: 'GestionProductos',
+  name: "GestionProductos",
   data() {
     return {
-      urlApi: 'http://localhost:8080/smash-order/api',
       productos: [],
       categorias: [],
       productoNuevo: {
-        name: '',
-        description: '',
+        name: "",
+        description: "",
         price: 0,
-        category: { id: 0 }
+        category: { id: 0 },
       },
       productoEditado: {
         id: 0,
-        name: '',
-        description: '',
+        name: "",
+        description: "",
         price: 0,
-        category: { id: 0 }
+        category: { id: 0 },
       },
       cargando: false,
       modalAgregar: null,
       modalEditar: null,
+      filtro: "",
+      filtroCategoria: 0,
       precioMin: 0,
-      precioMax: 0
+      precioMax: 0,
     };
   },
   mounted() {
-    this.modalAgregar = new Modal(document.getElementById('modalGuardarProducto'));
-    this.modalEditar = new Modal(document.getElementById('modalEditarProducto'));
+    this.modalAgregar = new Modal(
+      document.getElementById("modalGuardarProducto")
+    );
+    this.modalEditar = new Modal(
+      document.getElementById("modalEditarProducto")
+    );
     this.obtenerProductos();
     this.obtenerCategorias();
   },
   methods: {
     validarProducto(producto) {
-      if (!producto.name || producto.name.trim() === '') {
-        mostrarAlerta('Información inválida', 'info', 'Ingrese el nombre');
+      if (!producto.name?.trim()) {
+        mostrarAlerta("Información inválida", "info", "Ingrese el nombre");
         return false;
-      } else if (!producto.description || producto.description.trim() === '') {
-        mostrarAlerta('Información inválida', 'info', 'Ingrese la descripción');
+      } else if (!producto.description?.trim()) {
+        mostrarAlerta("Información inválida", "info", "Ingrese la descripción");
         return false;
       } else if (isNaN(producto.price) || producto.price <= 0) {
-        mostrarAlerta('Información inválida', 'info', 'Ingrese el precio correctamente');
+        mostrarAlerta(
+          "Información inválida",
+          "info",
+          "Ingrese el precio correctamente"
+        );
         return false;
       } else if (!producto.category || producto.category.id === 0) {
-        mostrarAlerta('Información incompleta', 'info', 'Seleccione una categoría');
+        mostrarAlerta(
+          "Información incompleta",
+          "info",
+          "Seleccione una categoría"
+        );
         return false;
       }
       return true;
@@ -224,10 +249,9 @@ export default {
     async obtenerProductos() {
       this.cargando = true;
       try {
-        const res = await axios.get(this.urlApi + '/products');
-        this.productos = res.data;
+        this.productos = await getProducts();
       } catch (error) {
-        mostrarAlerta('Error al cargar los productos', 'danger');
+        mostrarAlerta("Error al cargar los productos", "danger");
       } finally {
         this.cargando = false;
       }
@@ -235,98 +259,103 @@ export default {
 
     async obtenerCategorias() {
       try {
-        const res = await axios.get(this.urlApi + '/categories');
-        this.categorias = res.data;
+        this.categorias = await getCategories();
       } catch (error) {
-        mostrarAlerta('Error al cargar las categorías', 'danger');
+        mostrarAlerta("Error al cargar las categorías", "danger");
       }
     },
 
     async filtrarBusqueda() {
       if (!this.filtro.trim()) return this.obtenerProductos();
       try {
-        const res = await axios.get(`${this.urlApi}/products/search?name=${this.filtro}`, {
-          params: { q: this.filtro }
-        });
-        this.productos = res.data;
+        this.productos = await searchProducts(this.filtro);
       } catch {
-        mostrarAlerta('Error en la búsqueda', 'danger');
+        mostrarAlerta("Error en la búsqueda", "danger");
       }
     },
 
     async filtrarPorCategoria() {
       if (this.filtroCategoria == 0) return this.obtenerProductos();
       try {
-        const res = await axios.get(`${this.urlApi}/products/category/${this.filtroCategoria}`);
-        this.productos = res.data;
+        this.productos = await filterByCategory(this.filtroCategoria);
       } catch {
-        mostrarAlerta('Error al filtrar por categoría', 'danger');
+        mostrarAlerta("Error al filtrar por categoría", "danger");
       }
     },
 
     async filtrarPorPrecio() {
       try {
-        const res = await axios.get(`${this.urlApi}/products/price-range?minPrice=${this.precioMin}&maxPrice=${this.precioMax}`)
-        this.productos = res.data;
+        this.productos = await filterByPrice(this.precioMin, this.precioMax);
       } catch {
-        mostrarAlerta('Error al filtrar por precio', 'danger');
+        mostrarAlerta("Error al filtrar por precio", "danger");
       }
     },
 
     limpiarFiltros() {
-      this.filtro = '';
+      this.filtro = "";
       this.filtroCategoria = 0;
-      this.precioMin = '';
-      this.precioMax = '';
+      this.precioMin = "";
+      this.precioMax = "";
       this.obtenerProductos();
     },
 
     async guardarProducto() {
       if (!this.validarProducto(this.productoNuevo)) return;
       try {
-        await axios.post(this.urlApi + '/products', this.productoNuevo);
-        this.productoNuevo = { name: '', description: '', price: 0, category: { id: 0 } };
-        mostrarAlerta('Producto guardado exitosamente', 'success');
+        await createProduct(this.productoNuevo);
+        this.productoNuevo = {
+          name: "",
+          description: "",
+          price: 0,
+          category: { id: 0 },
+        };
+        mostrarAlerta("Producto guardado exitosamente", "success");
         this.obtenerProductos();
         this.modalAgregar.hide();
       } catch (error) {
-        mostrarAlerta('Error al guardar el producto', 'danger');
+        mostrarAlerta("Error al guardar el producto", "danger");
       }
     },
 
     async obtenerPorId(id) {
       try {
-        const res = await axios.get(`${this.urlApi}/products/${id}`);
-        this.productoEditado = res.data;
+        this.productoEditado = await getProductById(id);
         this.modalEditar.show();
       } catch (error) {
-        mostrarAlerta('Error al obtener los datos para editar', 'danger');
+        mostrarAlerta("Error al obtener los datos para editar", "danger");
       }
     },
 
     async actualizarProducto() {
       if (!this.validarProducto(this.productoEditado)) return;
       try {
-        await axios.put(`${this.urlApi}/products/${this.productoEditado.id}`, this.productoEditado);
-        mostrarAlerta('Producto actualizado correctamente', 'success');
+        await updateProduct(this.productoEditado);
+        mostrarAlerta("Producto actualizado correctamente", "success");
         this.obtenerProductos();
         this.modalEditar.hide();
       } catch (error) {
-        mostrarAlerta('Error al actualizar el producto', 'danger');
+        mostrarAlerta("Error al actualizar el producto", "danger");
       }
     },
 
     async eliminarProducto(id) {
       try {
-        confirmar(`${this.urlApi}/products/${id}`, 'Eliminar producto', '¿Estás seguro de eliminar este producto?');
-        this.obtenerProductos();
+        const confirmado = await confirmar("Eliminar producto", "¿Estás seguro de eliminar este producto?");
+        if (confirmado) {
+          await deleteProduct(id);
+          mostrarAlerta("Eliminado", "success");
+          this.obtenerProductos();
+        } else {
+          mostrarAlerta("Operación cancelada", "info");
+        }
       } catch (error) {
-        mostrarAlerta('Error al eliminar el producto', 'danger');
+        mostrarAlerta("Error al eliminar el producto", "danger");
       }
-    }
-  }
+    },
+  },
 };
 </script>
+
 <style>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');

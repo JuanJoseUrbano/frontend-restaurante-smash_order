@@ -9,7 +9,7 @@
       <div class="row g-3 align-items-center categorias-actions">
         <!-- Botón Agregar -->
         <div class="col-md-auto">
-          <button class="btn btn-primary btn-guardar" @click="this.modalAgregar.show()">
+          <button class="btn btn-primary btn-guardar" @click="modalAgregar.show()">
             <i class="fas fa-plus-circle me-2"></i>Agregar
           </button>
         </div>
@@ -17,12 +17,7 @@
         <!-- Búsqueda -->
         <div class="col-md-6">
           <div class="input-group">
-            <input 
-              type="text" 
-              class="form-control search-input" 
-              v-model="filtro" 
-              placeholder="Buscar por nombre..." 
-            />
+            <input type="text" class="form-control search-input" v-model="filtro" placeholder="Buscar por nombre..." />
             <button @click="filtrarBusqueda" class="btn btn-primary">
               <i class="fas fa-search"></i>
             </button>
@@ -59,7 +54,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-            <button type="button" class="btn btn-dark" @click="guardarCategoria()">Guardar</button>
+            <button type="button" class="btn btn-dark" @click="guardarCategoria">Guardar</button>
           </div>
         </div>
       </div>
@@ -81,7 +76,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-            <button type="button" class="btn btn-warning" @click="actualizarCategoria()">Editar</button>
+            <button type="button" class="btn btn-warning" @click="actualizarCategoria">Editar</button>
           </div>
         </div>
       </div>
@@ -129,14 +124,20 @@
 
 <script>
 import { mostrarAlerta, confirmar } from '@/functions.js';
-import axios from 'axios';
 import Modal from 'bootstrap/js/dist/modal';
+import {
+  getCategories,
+  searchCategories,
+  getCategoryById,
+  createCategory,
+  updateCategory,
+  deleteCategory
+} from '@/services/categories';
 
 export default {
   name: 'GestionCategorias',
   data() {
     return {
-      urlApi: 'http://localhost:8080/smash-order/api',
       categorias: [],
       categoriaNueva: { name: '' },
       categoriaEditada: { id: 0, name: '' },
@@ -163,8 +164,7 @@ export default {
     async obtenerCategorias() {
       this.cargando = true;
       try {
-        const res = await axios.get(this.urlApi + '/categories');
-        this.categorias = res.data;
+        this.categorias = await getCategories();
       } catch (error) {
         mostrarAlerta('Error al cargar las categorías', 'danger');
       } finally {
@@ -178,8 +178,7 @@ export default {
         return;
       }
       try {
-        const res = await axios.get(`${this.urlApi}/categories/search?name=${this.filtro}`);
-        this.categorias = res.data;
+        this.categorias = await searchCategories(this.filtro);
       } catch {
         mostrarAlerta('Error en la búsqueda', 'danger');
       }
@@ -193,7 +192,7 @@ export default {
     async guardarCategoria() {
       if (!this.validarCategoria(this.categoriaNueva)) return;
       try {
-        await axios.post(this.urlApi + '/categories', this.categoriaNueva);
+        await createCategory(this.categoriaNueva);
         this.categoriaNueva = { name: '' };
         mostrarAlerta('Categoría guardada exitosamente', 'success');
         this.obtenerCategorias();
@@ -205,8 +204,7 @@ export default {
 
     async obtenerPorId(id) {
       try {
-        const res = await axios.get(`${this.urlApi}/categories/${id}`);
-        this.categoriaEditada = res.data;
+        this.categoriaEditada = await getCategoryById(id);
         this.modalEditar.show();
       } catch (error) {
         mostrarAlerta('Error al obtener los datos para editar', 'danger');
@@ -216,7 +214,7 @@ export default {
     async actualizarCategoria() {
       if (!this.validarCategoria(this.categoriaEditada)) return;
       try {
-        await axios.put(`${this.urlApi}/categories/${this.categoriaEditada.id}`, this.categoriaEditada);
+        await updateCategory(this.categoriaEditada);
         mostrarAlerta('Categoría actualizada correctamente', 'success');
         this.obtenerCategorias();
         this.modalEditar.hide();
@@ -227,15 +225,28 @@ export default {
 
     async eliminarCategoria(id) {
       try {
-        confirmar(`${this.urlApi}/categories/${id}`, 'Eliminar categoría', '¿Estás seguro de eliminar esta categoría?');
-        this.obtenerCategorias();
+        const confirmado = await confirmar(
+          "Eliminar categoría",
+          "¿Estás seguro de eliminar esta categoría?"
+        );
+
+        if (confirmado) {
+          await deleteCategory(id);
+          mostrarAlerta("Categoría eliminada correctamente", "success");
+          this.obtenerCategorias();
+        } else {
+          mostrarAlerta("Operación cancelada", "info");
+        }
+
       } catch (error) {
-        mostrarAlerta('Error al eliminar la categoría', 'danger');
+        mostrarAlerta("Error al eliminar la categoría", "danger");
       }
     }
+
   }
 };
 </script>
+
 
 <style scoped>
 .categorias-container {

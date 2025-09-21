@@ -1,11 +1,7 @@
 <template>
   <div class="login-page">
     <div class="login-box">
-      <img
-        class="logo"
-        src="@/assets/logo_smash_order.png"
-        alt="SmashOrder Logo"
-      />
+      <img class="logo" src="@/assets/logo_smash_order.png" alt="SmashOrder Logo" />
       <h2>Iniciar Sesión</h2>
       <form @submit.prevent="login">
         <div class="form-group">
@@ -23,17 +19,15 @@
       </form>
       <p class="register-text">
         ¿No tienes cuenta?
-        <router-link to="/signin" class="register-link"
-          >Regístrate aquí</router-link
-        >
+        <router-link to="/signin" class="register-link">Regístrate aquí</router-link>
       </p>
     </div>
   </div>
 </template>
 
 <script>
-import axios from "axios";
 import { mostrarAlerta } from "@/functions";
+import { loginUser } from "@/services/users";
 
 export default {
   name: "LoginPage",
@@ -53,40 +47,28 @@ export default {
           password: this.password,
         };
 
-        const response = await axios.post(
-          "http://localhost:8080/smash-order/api/users/login",
-          payload
-        );
+        await loginUser(payload);
 
-        if (response.status === 200) {
-          // Guardamos sesión en localStorage
-          localStorage.setItem("isAuthenticated", "true");
-          localStorage.setItem("username", this.usuario);
+        // Guardamos sesión en localStorage
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("username", this.usuario);
 
-          mostrarAlerta("Inicio de sesión exitoso", "success");
-          this.$router.push("/dashboard-products");
-        }
+        mostrarAlerta("Inicio de sesión exitoso", "success");
+        this.$router.push("/dashboard-products");
       } catch (error) {
-        if (error.response) {
-          if (error.response.status === 401) {
-            mostrarAlerta(
-              "Error al iniciar sesión",
-              "warning",
-              "Usuario o contraseña incorrectos"
-            );
-          } else {
-            mostrarAlerta(
-              "Error inesperado",
-              "danger",
-              "Código: " + error.response.status
-            );
-          }
-        } else {
+        if (error.response?.status === 401) {
           mostrarAlerta(
             "Error al iniciar sesión",
-            "danger",
-            "Servidor caído o sin conexión"
+            "warning",
+            "Usuario o contraseña incorrectos"
           );
+        } else {
+          mostrarAlerta(
+            "Error inesperado",
+            "error",
+            "Servidor no disponible"
+          );
+
         }
         console.error("Error en login:", error);
       } finally {
@@ -98,23 +80,8 @@ export default {
 </script>
 
 
+
 <style>
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css");
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
-
-:root {
-  --primary-color: #580e00;
-  --primary-light: #7a2c1a;
-  --primary-dark: #3d0900;
-  --accent-color: #ff8c00;
-  --text-dark: #000000; /* texto negro */
-  --text-light: #7f8c8d;
-  --background-light: #ffffff; /* fondo blanco */
-}
-
-* {
-  font-family: "Poppins", sans-serif;
-}
 
 .login-page {
   display: flex;
@@ -184,11 +151,9 @@ input[type="password"]:focus {
 .btn-login {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(
-    135deg,
-    var(--primary-color),
-    var(--primary-dark)
-  );
+  background: linear-gradient(135deg,
+      var(--primary-color),
+      var(--primary-dark));
   color: white;
   border: none;
   border-radius: 10px;
@@ -200,11 +165,9 @@ input[type="password"]:focus {
 }
 
 .btn-login:hover {
-  background: linear-gradient(
-    135deg,
-    var(--primary-dark),
-    var(--primary-color)
-  );
+  background: linear-gradient(135deg,
+      var(--primary-dark),
+      var(--primary-color));
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(88, 14, 0, 0.35);
 }
