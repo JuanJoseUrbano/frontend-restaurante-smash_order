@@ -248,13 +248,7 @@ export default {
 </script>
 
 
-<style scoped>
-.categorias-container {
-  padding: 2rem;
-  background-color: var(--background-light);
-  min-height: 100vh;
-}
-
+<style>
 .categorias-header {
   text-align: center;
   margin-bottom: 2rem;

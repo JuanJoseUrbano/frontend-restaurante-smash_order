@@ -6,6 +6,7 @@ import Categories from "@/views/Categories.vue";
 import Products from "@/views/Products.vue";
 import Tables from "@/views/Tables.vue";
 import { createRouter, createWebHistory } from "vue-router";
+import Users from "@/views/Users.vue";
 
 const routes = [
   { redirect: "", component: HomeView },
@@ -13,6 +14,7 @@ const routes = [
   { path: "/about", name: "About", component: AboutView },
   { path: "/signin", name: "Signin", component: SignIn },
   { path: "/login", name: "LogIn", component: Login },
+  { path: "/dashboard-users", name: "Users", component: Users },
   { path: "/dashboard-products", name: "Products", component: Products },
   { path: "/dashboard-categories", name: "Categories", component: Categories },
   { path: "/dashboard-tables", name: "Tables", component: Tables },

@@ -357,25 +357,6 @@ export default {
 </script>
 
 <style>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-:root {
-  --primary-color: #580E00;
-  --primary-light: #7a2c1a;
-  --primary-dark: #3d0900;
-  --accent-color: #FF8C00;
-  --text-dark: #2C3E50;
-  --text-light: #7F8C8D;
-  --background-light: #FFF9F0;
-}
-
-.productos-container {
-  padding: 2rem;
-  background-color: var(--background-light);
-  min-height: 100vh;
-}
-
 .productos-header {
   text-align: center;
   margin-bottom: 2rem;
