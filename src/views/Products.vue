@@ -11,9 +11,10 @@
       <div class="row g-3 align-items-center">
         <!-- Botón agregar -->
         <div class="col-md-auto">
-          <button class="btn btn-guardar d-flex align-items-center" @click="modalAgregar.show()">
+          <button class="btn btn-guardar btn-sm d-flex align-items-center" @click="modalAgregar.show()">
             <i class="fas fa-plus-circle me-2"></i> Nuevo Producto
           </button>
+
         </div>
 
         <!-- Búsqueda -->
@@ -559,18 +560,21 @@ export default {
 }
 
 .btn-guardar {
-  background-color: #580E00 !important;
-  /* tu color */
-  border-color: #580E00 !important;
-  color: #fff !important;
-  /* texto blanco */
+  background: #580e00;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  /* más pequeño */
+  font-size: 0.85rem;
+  /* texto más chico */
 }
 
 .btn-guardar:hover {
-  background-color: #3d0900 !important;
-  /* un poco más oscuro al pasar el mouse */
-  border-color: #3d0900 !important;
+  background: #7a2c1a;
 }
+
 
 .input-precio {
   max-width: 80px;

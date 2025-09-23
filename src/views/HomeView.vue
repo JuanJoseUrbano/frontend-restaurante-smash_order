@@ -1,4 +1,5 @@
 <template>
+  <PublicHeader/>
   <main class="container main-section">
     <div class="row w-100 align-items-center">
       <!-- Imagen -->
@@ -23,8 +24,13 @@
 </template>
 
 <script>
+import PublicHeader from '@/components/PublicHeader.vue';
+
 export default {
   name: "HomeView",
+   components: {
+    PublicHeader
+  }
 };
 </script>
 
