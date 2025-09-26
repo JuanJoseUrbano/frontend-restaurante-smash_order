@@ -8,7 +8,9 @@ import Users from "@/views/Users.vue";
 import Products from "@/views/Products.vue";
 import Categories from "@/views/Categories.vue";
 import Tables from "@/views/Tables.vue";
+import Orders from "@/views/Orders.vue"; // 👈 importar aquí
 import CustomerMenu from "@/views/CustomerMenu.vue";
+import SelectRolePage from "@/views/SelectRolePage.vue"; // 👈 importar aquí
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -17,15 +19,19 @@ const routes = [
   { path: "/login", component: Login },
   { path: "/signin", component: SignIn },
 
+  // 👇 nueva ruta pública para elegir rol
+  { path: "/select-role", component: SelectRolePage },
+
   {
     path: "/dashboard",
     component: DashboardLayout,
-    meta: { requiresAuth: true }, // <-- agregado
+    meta: { requiresAuth: true },
     children: [
       { path: "users", component: Users },
       { path: "products", component: Products },
       { path: "categories", component: Categories },
       { path: "tables", component: Tables },
+      { path: "orders", component: Orders }, // 👈 nueva ruta
     ],
   },
 
@@ -38,21 +44,20 @@ const router = createRouter({
   routes,
 });
 
-// Guard global para rutas que requieren autenticación
+// Guard global
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem("isAuthenticated");
-  const role = localStorage.getItem("role");
+  const activeRole = localStorage.getItem("activeRole");
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     next("/login");
-  } else if (to.path.startsWith("/dashboard") && role !== "Administrador") {
+  } else if (to.path.startsWith("/dashboard") && activeRole !== "ROLE_ADMIN") {
     next("/menu");
-  } else if (to.path === "/menu" && role !== "Cliente") {
+  } else if (to.path === "/menu" && activeRole !== "ROLE_CUSTOMER") {
     next("/dashboard");
   } else {
     next();
   }
 });
-
 
 export default router;

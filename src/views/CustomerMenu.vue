@@ -1,5 +1,12 @@
 <template>
-  <HeaderAuthenticatedCustomer/>
+  <HeaderAuthenticatedCustomer :usuario="usuario" />
+
+  <div class="text-end mt-3 me-3" v-if="roles.length > 1">
+    <button class="btn btn-outline-dark btn-sm" @click="cambiarRol">
+      <i class="fas fa-exchange-alt me-1"></i> Cambiar Rol
+    </button>
+  </div>
+
   <div class="catalogo-container">
 
     <div class="catalogo-header shadow-sm text-center">
@@ -56,25 +63,24 @@
     </div>
 
     <div v-else class="row row-cols-1 row-cols-md-3 g-4">
-  <div v-for="p in productos" :key="p.id" class="col">
-    <div class="card h-100 shadow-sm">
-      <div class="card-body d-flex flex-column">
-        <h5 class="card-title">{{ p.name }}</h5>
-        <p class="card-text text-truncate">{{ p.description }}</p>
+      <div v-for="p in productos" :key="p.id" class="col">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ p.name }}</h5>
+            <p class="card-text text-truncate">{{ p.description }}</p>
 
-        <div class="mt-auto d-flex justify-content-between align-items-center">
-          <span class="badge bg-success fs-6">${{ p.price }}</span>
-          <span class="badge bg-secondary">{{ p.category?.name || 'Sin Categoría' }}</span>
+            <div class="mt-auto d-flex justify-content-between align-items-center">
+              <span class="badge bg-success fs-6">${{ p.price }}</span>
+              <span class="badge bg-secondary">{{ p.category?.name || 'Sin Categoría' }}</span>
+            </div>
+
+            <button class="btn btn-agregar mt-3 w-100" @click="agregarAlCarrito(p)">
+              <i class="fas fa-cart-plus me-1"></i> Agregar
+            </button>
+          </div>
         </div>
-
-        <button class="btn btn-agregar mt-3 w-100" @click="agregarAlCarrito(p)">
-          <i class="fas fa-cart-plus me-1"></i> Agregar
-        </button>
       </div>
     </div>
-  </div>
-</div>
-
 
     <!-- Carrito de compras flotante -->
     <div class="carrito-flotante card shadow-sm" v-if="carrito.length > 0">
@@ -109,24 +115,18 @@
     </div>
   </div>
 </template>
-
-
 <script>
 import { mostrarAlerta } from "@/functions.js";
-import {
-  getProducts,
-  searchProducts,
-  filterByCategory,
-  filterByPrice,
-} from "@/services/products";
+import { getProducts, searchProducts, filterByCategory, filterByPrice } from "@/services/products";
 import { getCategories } from "@/services/categories";
 import HeaderAuthenticatedCustomer from "@/components/HeaderAuthenticatedCustomer.vue";
 
 export default {
   name: "CatalogoProductos",
-  components: {HeaderAuthenticatedCustomer},
+  components: { HeaderAuthenticatedCustomer },
   data() {
     return {
+      usuario: JSON.parse(localStorage.getItem("user")) || {}, // 🔹 Aquí guardamos al usuario completo
       productos: [],
       categorias: [],
       cargando: false,
@@ -135,6 +135,7 @@ export default {
       precioMin: 0,
       precioMax: 0,
       carrito: [],
+      roles: JSON.parse(localStorage.getItem("roles")) || [],
     };
   },
   computed: {
@@ -157,7 +158,6 @@ export default {
         this.cargando = false;
       }
     },
-
     async obtenerCategorias() {
       try {
         this.categorias = await getCategories();
@@ -165,7 +165,6 @@ export default {
         mostrarAlerta("Error al cargar las categorías", "danger");
       }
     },
-
     async filtrarBusqueda() {
       if (!this.filtro.trim()) return this.obtenerProductos();
       try {
@@ -174,7 +173,6 @@ export default {
         mostrarAlerta("Error en la búsqueda", "danger");
       }
     },
-
     async filtrarPorCategoria() {
       if (this.filtroCategoria == 0) return this.obtenerProductos();
       try {
@@ -183,7 +181,6 @@ export default {
         mostrarAlerta("Error al filtrar por categoría", "danger");
       }
     },
-
     async filtrarPorPrecio() {
       try {
         this.productos = await filterByPrice(this.precioMin, this.precioMax);
@@ -191,7 +188,6 @@ export default {
         mostrarAlerta("Error al filtrar por precio", "danger");
       }
     },
-
     limpiarFiltros() {
       this.filtro = "";
       this.filtroCategoria = 0;
@@ -199,7 +195,6 @@ export default {
       this.precioMax = "";
       this.obtenerProductos();
     },
-
     // Carrito
     agregarAlCarrito(producto) {
       const existe = this.carrito.find((p) => p.id === producto.id);
@@ -209,38 +204,35 @@ export default {
         this.carrito.push({ ...producto, cantidad: 1 });
       }
     },
-
     cambiarCantidad(item, delta) {
       item.cantidad += delta;
       if (item.cantidad <= 0) {
         this.eliminarDelCarrito(item);
       }
     },
-
     eliminarDelCarrito(item) {
       this.carrito = this.carrito.filter((p) => p.id !== item.id);
     },
-
     confirmarPedido() {
-  if (this.carrito.length === 0) return;
+      if (this.carrito.length === 0) return;
 
-  // Construir el texto del pedido
-  const listaProductos = this.carrito
-    .map(item => `${item.name} x${item.cantidad} - $${item.price * item.cantidad}`)
-    .join('\n');
+      const listaProductos = this.carrito
+        .map(item => `${item.name} x${item.cantidad} - $${item.price * item.cantidad}`)
+        .join('\n');
 
-  const total = this.totalCarrito;
+      const total = this.totalCarrito;
 
-  // Mostrar alerta con los productos elegidos
-  mostrarAlerta(
-    `Pedido confirmado con éxito 🎉\n\nProductos:\n${listaProductos}\n\nTotal: $${total}`,
-    "success"
-  );
+      mostrarAlerta(
+        `Pedido confirmado con éxito 🎉\n\nProductos:\n${listaProductos}\n\nTotal: $${total}`,
+        "success"
+      );
 
-  // Vaciar carrito
-  this.carrito = [];
-},
-
+      this.carrito = [];
+    },
+    cambiarRol() {
+      localStorage.removeItem("activeRole");
+      this.$router.push("/select-role");
+    },
   },
 };
 </script>

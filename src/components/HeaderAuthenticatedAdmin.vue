@@ -10,12 +10,6 @@
         </div>
       </router-link>
 
-      <!-- Botón hamburguesa para móviles -->
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
-        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
       <!-- Menú usuario -->
       <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
         <ul class="navbar-nav align-items-center">
@@ -28,7 +22,7 @@
             </div>
           </li>
 
-          <!-- Botones de acción -->
+          <!-- Botones -->
           <li class="nav-item d-flex gap-2">
             <router-link to="/perfil" class="btn btn-profile">
               <i class="fas fa-user me-1"></i> Perfil
@@ -45,33 +39,47 @@
 
 <script>
 export default {
-  name: "AppHeaderAuthenticated",
-  data() {
-    return {
-      username: localStorage.getItem("username") || "Administrador",
-      role: localStorage.getItem("role") || "Supervisor",
-    };
+  name: "HeaderAuthenticatedAdmin",
+  props: {
+    username: {
+      type: String,
+      default: "Usuario"
+    },
+    roles: {
+      type: Array,
+      default: () => []
+    }
+  },
+  computed: {
+    role() {
+      if (this.roles.length > 0) {
+        if (this.roles[0].name === "ROLE_ADMIN") return "Administrador";
+        if (this.roles[0].name === "ROLE_EMPLOYEE") return "Empleado";
+        if (this.roles[0].name === "ROLE_CUSTOMER") return "Cliente";
+      }
+      return "Sin rol";
+    }
   },
   methods: {
     logout() {
       if (confirm("¿Deseas cerrar sesión?")) {
-        localStorage.removeItem("isAuthenticated");
-        localStorage.removeItem("username");
-        localStorage.removeItem("role");
+        localStorage.clear();
         this.$router.push("/login");
       }
     }
-
   }
 };
 </script>
 
+
 <style scoped>
 .navbar-custom {
-  background-color: #580e00; /* Igual que el footer */
+  background-color: #580e00;
+  /* Igual que el footer */
   color: #ffffff;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* Inverso del footer (sombra hacia abajo) */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Inverso del footer (sombra hacia abajo) */
   padding: 0.5rem 1rem;
 }
 

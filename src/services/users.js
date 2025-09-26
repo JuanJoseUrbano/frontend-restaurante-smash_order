@@ -2,8 +2,9 @@ import api from "./api";
 
 export async function loginUser(credentials) {
   const res = await api.post("/users/login", credentials);
-  return res.data;
+  return res.data; // devolvemos SOLO los datos del usuario
 }
+
 
 export async function registerUser(user) {
   const res = await api.post("/users", user);
@@ -17,6 +18,13 @@ export async function getUsers() {
 
 export async function getUserById(id) {
   const res = await api.get(`/users/${id}`);
+  return res.data;
+}
+
+export async function searchUsers(name) {
+  const res = await api.get(`/users/search`, {
+    params: { name }
+  });
   return res.data;
 }
 

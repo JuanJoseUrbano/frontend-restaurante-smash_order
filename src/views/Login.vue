@@ -1,35 +1,35 @@
-<template>
-  <PublicHeader />
-  <div class="login-page">
-    <div class="login-box">
-      <img class="logo" src="@/assets/logo_smash_order.png" alt="SmashOrder Logo" />
-      <h2>Iniciar Sesión</h2>
-      <form @submit.prevent="login">
-        <div class="form-group">
-          <label for="username">Usuario:</label>
-          <input type="text" id="username" v-model="usuario" required />
-        </div>
-        <div class="form-group">
-          <label for="password">Contraseña:</label>
-          <input type="password" id="password" v-model="password" required />
-        </div>
-        <button type="submit" class="btn-login" :disabled="isSubmitting">
-          <span v-if="!isSubmitting">Ingresar</span>
-          <span v-else>Cargando...</span>
-        </button>
-      </form>
-      <p class="register-text">
-        ¿No tienes cuenta?
-        <router-link to="/signin" class="register-link">Regístrate aquí</router-link>
-      </p>
+  <template>
+    <PublicHeader />
+    <div class="login-page">
+      <div class="login-box">
+        <img class="logo" src="@/assets/logo_smash_order.png" alt="SmashOrder Logo" />
+        <h2>Iniciar Sesión</h2>
+        <form @submit.prevent="login">
+          <div class="form-group">
+            <label for="username">Usuario:</label>
+            <input type="text" id="username" v-model="usuario" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Contraseña:</label>
+            <input type="password" id="password" v-model="password" required />
+          </div>
+          <button type="submit" class="btn-login" :disabled="isSubmitting">
+            <span v-if="!isSubmitting">Ingresar</span>
+            <span v-else>Cargando...</span>
+          </button>
+        </form>
+        <p class="register-text">
+          ¿No tienes cuenta?
+          <router-link to="/signin" class="register-link">Regístrate aquí</router-link>
+        </p>
+      </div>
     </div>
-  </div>
-</template>
+  </template>
 
 <script>
 import PublicHeader from "@/components/PublicHeader.vue";
 import { mostrarAlerta } from "@/functions";
-import { loginUser } from "@/services/users";
+import { loginUser } from "@/services/users"; // asegúrate cómo devuelve loginUser
 
 export default {
   name: "LoginPage",
@@ -50,46 +50,103 @@ export default {
           password: this.password,
         };
 
-        await loginUser(payload);
+        // 1) Llamada al servicio (puede devolver axios response o ya data)
+        const resp = await loginUser(payload);
+        // Manejo robusto: si es axios response -> extrae .data, si ya es data -> úsalo
+        const userData = resp?.data ?? resp;
 
+        console.log("login response:", resp);
+        console.log("userData:", userData);
+
+        if (!userData || !userData.id) {
+          throw new Error("Respuesta de login inválida");
+        }
+
+        // 2) Guardar usuario completo
         localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("username", this.usuario);
+        localStorage.setItem("user", JSON.stringify(userData));
 
-        let role = "Administrador"; // <-- por defecto admin
-        //let role = "Cliente";
-        localStorage.setItem("role", role);
+        // 3) Extraer roles (soporta que roles venga como array de objetos o strings)
+        let roles = [];
+        if (Array.isArray(userData.roles)) {
+          if (userData.roles.length > 0 && typeof userData.roles[0] === "object") {
+            roles = userData.roles.map(r => r.name);
+          } else {
+            roles = userData.roles;
+          }
+        }
+        localStorage.setItem("roles", JSON.stringify(roles));
+
+        // 4) Guardar token si viene (opcional)
+        if (userData.token) {
+          localStorage.setItem("token", userData.token);
+        } else if (userData.accessToken) {
+          localStorage.setItem("token", userData.accessToken);
+        }
 
         mostrarAlerta("Inicio de sesión exitoso", "success");
 
-        // Redirige según rol
-        if (role === "Administrador") {
-          this.$router.push("/dashboard");
-        } else if (role === "Cliente") {
-          this.$router.push("/menu");
+        // 5) Si tiene 0 roles --> error (opcional)
+        if (roles.length === 0) {
+          mostrarAlerta("Error", "warning", "Usuario sin roles asignados");
+          this.isSubmitting = false;
+          return;
+        }
+
+        // 6) Si tiene 1 rol → set activeRole y redirige según rol
+        if (roles.length === 1) {
+          const onlyRole = roles[0];
+          localStorage.setItem("activeRole", onlyRole);
+
+          // opcional: guardar también una versión legible para compatibilidad
+          localStorage.setItem("role", this.humanRole(onlyRole));
+
+          this.redirectByRole(onlyRole);
+        } else {
+          // >1 rol → ir a la pantalla de selección
+          this.$router.push("/select-role");
         }
 
       } catch (error) {
-        if (error.response?.status === 401) {
-          mostrarAlerta(
-            "Error al iniciar sesión",
-            "warning",
-            "Usuario o contraseña incorrectos"
-          );
-        } else {
-          mostrarAlerta(
-            "Error inesperado",
-            "error",
-            "Servidor no disponible"
-          );
-        }
         console.error("Error en login:", error);
+        // Si error viene de axios
+        if (error.response?.status === 401) {
+          mostrarAlerta("Error al iniciar sesión", "warning", "Usuario o contraseña incorrectos");
+        } else if (error.response) {
+          mostrarAlerta("Error inesperado", "error", `Código ${error.response.status}`);
+        } else {
+          mostrarAlerta("Error inesperado", "error", "Servidor no disponible");
+        }
       } finally {
         this.isSubmitting = false;
       }
     },
+
+    redirectByRole(role) {
+      if (role === "ROLE_ADMIN") {
+        this.$router.push("/dashboard");
+      } else if (role === "ROLE_EMPLOYEE") {
+        this.$router.push("/employee");
+      } else if (role === "ROLE_CUSTOMER") {
+        this.$router.push("/menu");
+      } else {
+        this.$router.push("/");
+      }
+    },
+
+    humanRole(role) {
+      switch (role) {
+        case "ROLE_ADMIN": return "Administrador";
+        case "ROLE_EMPLOYEE": return "Empleado";
+        case "ROLE_CUSTOMER": return "Cliente";
+        default: return role;
+      }
+    }
   },
 };
 </script>
+
+
 
 <style>
 .login-page {
