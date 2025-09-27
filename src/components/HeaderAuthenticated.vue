@@ -2,13 +2,25 @@
   <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
       <!-- Logo y marca -->
-      <router-link to="/dashboard" class="navbar-brand d-flex align-items-center">
+      <router-link :to="dashboardRoute" class="navbar-brand d-flex align-items-center">
         <img class="logo-img" src="../assets/logo_smash_order.png" alt="Logo Smash Order" />
         <div class="brand-text ms-2">
           <span class="brand-main">SmashOrder</span>
-          <span class="brand-sub">Panel de Control</span>
+          <span class="brand-sub">{{ subtitle }}</span>
         </div>
       </router-link>
+
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarContent"
+        aria-controls="navbarContent"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
       <!-- Menú usuario -->
       <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
@@ -18,7 +30,7 @@
             <i class="fas fa-user-circle me-2" style="font-size: 1.5rem; color: white;"></i>
             <div class="text-white">
               <div class="username">{{ username }}</div>
-              <div class="role">{{ role }}</div>
+              <div class="role">{{ formattedRole }}</div>
             </div>
           </li>
 
@@ -39,7 +51,7 @@
 
 <script>
 export default {
-  name: "HeaderAuthenticatedAdmin",
+  name: "HeaderAuthenticated",
   props: {
     username: {
       type: String,
@@ -48,16 +60,37 @@ export default {
     roles: {
       type: Array,
       default: () => []
+    },
+    activeRole: {
+      type: String,
+      default: "ROLE_CUSTOMER"
     }
   },
   computed: {
-    role() {
-      if (this.roles.length > 0) {
-        if (this.roles[0].name === "ROLE_ADMIN") return "Administrador";
-        if (this.roles[0].name === "ROLE_EMPLOYEE") return "Empleado";
-        if (this.roles[0].name === "ROLE_CUSTOMER") return "Cliente";
+    formattedRole() {
+      switch (this.activeRole) {
+        case "ROLE_ADMIN": return "Administrador";
+        case "ROLE_EMPLOYEE": return "Empleado";
+        case "ROLE_CUSTOMER": return "Cliente";
+        default: return "Sin rol";
       }
-      return "Sin rol";
+    },
+    dashboardRoute() {
+      // Redirige al dashboard correspondiente según el rol activo
+      switch (this.activeRole) {
+        case "ROLE_ADMIN": return "/dashboard";
+        case "ROLE_EMPLOYEE": return "/employee";
+        case "ROLE_CUSTOMER": return "/menu";
+        default: return "/";
+      }
+    },
+    subtitle() {
+      switch (this.activeRole) {
+        case "ROLE_ADMIN": 
+        case "ROLE_EMPLOYEE": return "Panel de Control";
+        case "ROLE_CUSTOMER": return "Menú del Cliente";
+        default: return "";
+      }
     }
   },
   methods: {
@@ -70,7 +103,6 @@ export default {
   }
 };
 </script>
-
 
 <style scoped>
 .navbar-custom {

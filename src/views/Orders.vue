@@ -43,6 +43,13 @@
                     </button>
                 </div>
 
+                <!-- Nuevo Pedido -->
+                <div class="col-md-auto">
+                    <button class="btn btn-success" @click="nuevoPedido">
+                        <i class="fas fa-plus me-1"></i> Nuevo Pedido
+                    </button>
+                </div>
+
                 <!-- Badge resultados -->
                 <div class="col-md-auto ms-auto text-end">
                     <span class="badge bg-info fs-6">{{ pedidos.length }} Resultados</span>
@@ -258,13 +265,100 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL NUEVO -->
+        <div class="modal fade" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content shadow-lg">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Nuevo Pedido</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" v-if="pedidoNuevo">
+                        <!-- Cliente -->
+                        <div class="mb-3">
+                            <label class="form-label">Buscar Cliente</label>
+                            <input type="text" class="form-control" v-model="busquedaCliente" @input="buscarClientes"
+                                placeholder="Nombre, usuario o email" />
+                            <ul class="list-group mt-1" v-if="resultadosCliente.length">
+                                <li v-for="c in resultadosCliente" :key="c.id"
+                                    class="list-group-item list-group-item-action" @click="seleccionarClienteNuevo(c)">
+                                    {{ c.name }} ({{ c.email }})
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Mesa -->
+                        <div class="mb-3">
+                            <label class="form-label">Mesa</label>
+                            <select class="form-select" v-model="pedidoNuevo.table.id">
+                                <option v-for="m in mesasDisponibles" :key="m.id" :value="m.id">
+                                    Mesa {{ m.number }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Productos -->
+                        <div class="mb-3">
+                            <label class="form-label">Productos</label>
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-center">Precio</th>
+                                        <th class="text-center">Subtotal</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(d, index) in pedidoNuevo.orderDetails" :key="index">
+                                        <td>
+                                            <select class="form-select" v-model="d.product.id"
+                                                @change="actualizarProductoNuevo(d)">
+                                                <option v-for="p in productosDisponibles" :key="p.id" :value="p.id">
+                                                    {{ p.name }}
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="number" class="form-control form-control-sm text-center"
+                                                v-model.number="d.quantity" @input="recalcularSubtotalNuevo(d)" min="1" />
+                                        </td>
+                                        <td class="text-center">${{ d.product.price.toFixed(2) }}</td>
+                                        <td class="text-center">${{ d.subtotal.toFixed(2) }}</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-danger" @click="eliminarProductoNuevo(index)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="btn btn-sm btn-primary mt-2" @click="agregarProductoNuevo">
+                                <i class="fas fa-plus me-1"></i> Agregar producto
+                            </button>
+                        </div>
+
+                        <!-- Total -->
+                        <div class="mb-3 text-end">
+                            <strong>Total: ${{ pedidoNuevo.total.toFixed(2) }}</strong>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="btn btn-success" @click="guardarNuevoPedido">Guardar Pedido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script>
 import { mostrarAlerta, confirmar } from "@/functions.js";
 import Modal from "bootstrap/js/dist/modal";
-import { getOrders, deleteOrder, updateOrder } from "@/services/orders";
+import { getOrders, deleteOrder, updateOrder, createOrder } from "@/services/orders";
 import { getProducts } from "@/services/products";
 import { getTables } from "@/services/tables";
 import { searchUsers } from "@/services/users";
@@ -277,9 +371,11 @@ export default {
             pedidos: [],
             pedidosOriginales: [],
             pedidoSeleccionado: null,
+            pedidoNuevo: null,
             cargando: false,
             modalDetalle: null,
             modalEditar: null,
+            modalNuevo: null,
             filtro: "",
             filtroEstado: "0",
             filtroFecha: "",
@@ -294,6 +390,7 @@ export default {
         nextTick(() => {
             this.modalDetalle = new Modal(document.getElementById("modalDetallePedido"));
             this.modalEditar = new Modal(document.getElementById("modalEditarPedido"));
+            this.modalNuevo = new Modal(document.getElementById("modalNuevoPedido"));
         });
         this.obtenerPedidos();
         this.cargarProductos();
@@ -343,20 +440,43 @@ export default {
             }
         },
         editarPedido(pedido) {
+            // usamos pedidoSeleccionado para editar (con copia profunda)
             this.pedidoSeleccionado = JSON.parse(JSON.stringify(pedido));
+
+            // Aseguramos subtotales para mostrar y calcular
+            if (Array.isArray(this.pedidoSeleccionado.orderDetails)) {
+                this.pedidoSeleccionado.orderDetails.forEach(d => {
+                    d.subtotal = (d.subtotal !== undefined) ? d.subtotal : (d.quantity * (d.product?.price || 0));
+                });
+            } else {
+                this.pedidoSeleccionado.orderDetails = [];
+            }
+
             this.busquedaCliente = this.pedidoSeleccionado.customer?.name || "";
             this.busquedaEmpleado = this.pedidoSeleccionado.employee?.name || "";
             this.modalEditar.show();
         },
         async guardarCambios() {
             try {
+                // validar cliente y detalles
+                if (!this.pedidoSeleccionado.customer || !this.pedidoSeleccionado.customer.id) {
+                    mostrarAlerta("Seleccione un cliente válido.", "warning");
+                    return;
+                }
+                if (!this.pedidoSeleccionado.orderDetails || !this.pedidoSeleccionado.orderDetails.length) {
+                    mostrarAlerta("Agregue al menos un producto.", "warning");
+                    return;
+                }
+
                 this.recalcularTotal();
+
+                // employee: lo tomamos desde localStorage si está disponible
+                const user = JSON.parse(localStorage.getItem("user")) || null;
+                const employeePayload = user && user.id ? { id: user.id } : null;
 
                 const payload = {
                     customer: { id: this.pedidoSeleccionado.customer.id },
-                    employee: this.pedidoSeleccionado.employee
-                        ? { id: this.pedidoSeleccionado.employee.id }
-                        : null,
+                    employee: employeePayload,
                     table: { id: this.pedidoSeleccionado.table.id },
                     status: this.pedidoSeleccionado.status,
                     orderDetails: this.pedidoSeleccionado.orderDetails.map(d => ({
@@ -377,9 +497,9 @@ export default {
         // === FILTROS COMBINADOS ===
         aplicarFiltros() {
             this.pedidos = this.pedidosOriginales.filter(p => {
-                const coincideCliente = !this.filtro.trim() || p.customer?.name.toLowerCase().includes(this.filtro.toLowerCase());
+                const coincideCliente = !this.filtro.trim() || (p.customer?.name || "").toLowerCase().includes(this.filtro.toLowerCase());
                 const coincideEstado = this.filtroEstado === "0" || p.status === this.filtroEstado;
-                const coincideFecha = !this.filtroFecha || p.date.startsWith(this.filtroFecha);
+                const coincideFecha = !this.filtroFecha || (p.date || "").startsWith(this.filtroFecha);
                 return coincideCliente && coincideEstado && coincideFecha;
             });
         },
@@ -423,6 +543,7 @@ export default {
         agregarProducto() {
             if (!this.productosDisponibles.length) return;
             const producto = this.productosDisponibles[0];
+            if (!this.pedidoSeleccionado.orderDetails) this.pedidoSeleccionado.orderDetails = [];
             this.pedidoSeleccionado.orderDetails.push({
                 id: 0,
                 product: { ...producto },
@@ -447,20 +568,122 @@ export default {
             this.recalcularTotal();
         },
         recalcularTotal() {
+            if (!this.pedidoSeleccionado || !this.pedidoSeleccionado.orderDetails) return;
             this.pedidoSeleccionado.total = this.pedidoSeleccionado.orderDetails.reduce(
-                (sum, d) => sum + d.subtotal,
+                (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
                 0
             );
         },
 
+        // === NUEVO PEDIDO ===
+        nuevoPedido() {
+            this.pedidoNuevo = {
+                customer: null,
+                table: { id: this.mesasDisponibles[0]?.id || null },
+                status: "PENDING",
+                orderDetails: [],
+                total: 0,
+            };
+            this.busquedaCliente = "";
+            this.resultadosCliente = [];
+            this.modalNuevo.show();
+        },
+        async guardarNuevoPedido() {
+            try {
+                // validaciones
+                if (!this.pedidoNuevo.customer || !this.pedidoNuevo.customer.id) {
+                    mostrarAlerta("Seleccione un cliente para el pedido.", "warning");
+                    return;
+                }
+                if (!this.pedidoNuevo.table || !this.pedidoNuevo.table.id) {
+                    mostrarAlerta("Seleccione una mesa.", "warning");
+                    return;
+                }
+                if (!this.pedidoNuevo.orderDetails || !this.pedidoNuevo.orderDetails.length) {
+                    mostrarAlerta("Agregue al menos un producto.", "warning");
+                    return;
+                }
+
+                this.recalcularTotalNuevo();
+
+                // employee: lo tomamos desde localStorage si está disponible
+                const user = JSON.parse(localStorage.getItem("user")) || null;
+                const employeePayload = user && user.id ? { id: user.id } : null;
+
+                const payload = {
+                    customer: { id: this.pedidoNuevo.customer.id },
+                    employee: employeePayload,
+                    table: { id: this.pedidoNuevo.table.id },
+                    status: this.pedidoNuevo.status,
+                    orderDetails: this.pedidoNuevo.orderDetails.map(d => ({
+                        product: { id: d.product.id },
+                        quantity: d.quantity
+                    }))
+                };
+
+                await createOrder(payload);
+                mostrarAlerta("Pedido creado correctamente", "success");
+                this.modalNuevo.hide();
+                this.obtenerPedidos();
+            } catch (err) {
+                console.error(err);
+                mostrarAlerta("Error al crear el pedido", "danger");
+            }
+        },
+        seleccionarClienteNuevo(cliente) {
+            if (!this.pedidoNuevo) return;
+            this.pedidoNuevo.customer = { id: cliente.id, name: cliente.name };
+            this.busquedaCliente = cliente.name;
+            this.resultadosCliente = [];
+        },
+        agregarProductoNuevo() {
+            if (!this.productosDisponibles.length) return;
+            const producto = this.productosDisponibles[0];
+            this.pedidoNuevo.orderDetails.push({
+                product: { ...producto },
+                quantity: 1,
+                subtotal: producto.price,
+            });
+            this.recalcularTotalNuevo();
+        },
+        eliminarProductoNuevo(index) {
+            this.pedidoNuevo.orderDetails.splice(index, 1);
+            this.recalcularTotalNuevo();
+        },
+        actualizarProductoNuevo(detalle) {
+            const prod = this.productosDisponibles.find((p) => p.id === detalle.product.id);
+            if (prod) {
+                detalle.product = { ...prod };
+                this.recalcularSubtotalNuevo(detalle);
+            }
+        },
+        recalcularSubtotalNuevo(detalle) {
+            detalle.subtotal = detalle.quantity * detalle.product.price;
+            this.recalcularTotalNuevo();
+        },
+        recalcularTotalNuevo() {
+            if (!this.pedidoNuevo || !this.pedidoNuevo.orderDetails) return;
+            this.pedidoNuevo.total = this.pedidoNuevo.orderDetails.reduce(
+                (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
+                0
+            );
+        },
+
+        // === BUSCAR CLIENTE usada por ambos modales ===
         async buscarClientes() {
-            if (!this.busquedaCliente.trim()) {
+            if (!this.busquedaCliente.trim() || this.busquedaCliente.length < 2) {
                 this.resultadosCliente = [];
                 return;
             }
-            this.resultadosCliente = await searchUsers(this.busquedaCliente);
+            try {
+                this.resultadosCliente = await searchUsers(this.busquedaCliente);
+            } catch {
+                mostrarAlerta("Error al buscar clientes", "danger");
+            }
         },
+        // seleccionarCliente (para editar)
         seleccionarCliente(cliente) {
+            if (!this.pedidoSeleccionado) return;
             this.pedidoSeleccionado.customer = { id: cliente.id, name: cliente.name };
             this.busquedaCliente = cliente.name;
             this.resultadosCliente = [];
@@ -468,6 +691,7 @@ export default {
     },
 };
 </script>
+
 
 
 

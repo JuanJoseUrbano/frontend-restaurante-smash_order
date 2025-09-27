@@ -1,45 +1,40 @@
 <template>
   <div>
-    <HeaderAuthenticatedAdmin :username="username" :roles="roles" />
+    <!-- Header -->
+    <HeaderAuthenticated 
+      :username="username" 
+      :roles="roles" 
+      :active-role="activeRole" 
+    />
 
-    <div v-if="isAdminOrEmployee" class="dashboard-container">
+    <div v-if="isCustomer" class="dashboard-container">
+      <!-- Sidebar -->
       <aside class="dashboard-sidebar">
-        <h2 class="sidebar-title"><i class="fas fa-tools me-2"></i>Admin Dashboard</h2>
         <nav>
           <ul>
             <li>
-              <router-link to="/dashboard/users">
-                <i class="fas fa-users me-2"></i> Usuarios
+              <router-link to="/dashboard-customer/menu">
+                <i class="fas fa-box-open me-2"></i> Menu
               </router-link>
             </li>
             <li>
-              <router-link to="/dashboard/orders">
-                <i class="fas fa-clipboard-list me-2"></i> Pedidos
+              <router-link to="/dashboard-customer/orders">
+                <i class="fas fa-clipboard-list me-2"></i> Mis Pedidos
               </router-link>
             </li>
             <li>
-              <router-link to="/dashboard/products">
-                <i class="fas fa-box-open me-2"></i> Productos
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/dashboard/categories">
-                <i class="fas fa-tags me-2"></i> Categorías
-              </router-link>
-            </li>
-            <li>
-              <router-link to="/dashboard/tables">
-                <i class="fas fa-table me-2"></i> Mesas
+              <router-link to="/dashboard-customer/reservations">
+                <i class="fas fa-calendar-check me-2"></i> Mis Reservas
               </router-link>
             </li>
           </ul>
         </nav>
       </aside>
 
+      <!-- Contenido principal -->
       <main class="dashboard-content">
         <header class="dashboard-header d-flex justify-content-between align-items-center">
           <h1>Bienvenido, {{ username }}</h1>
-          <!-- Botón para cambiar rol si el usuario tiene más de 1 -->
           <div v-if="roles.length > 1">
             <button class="btn-role-switch" @click="cambiarRol">
               <i class="fas fa-exchange-alt"></i> Cambiar Rol
@@ -48,71 +43,91 @@
         </header>
 
         <section class="dashboard-main">
+          <!-- Cards resumen -->
           <div class="cards-container">
-            <div class="summary-card card-users">
-              <i class="fas fa-users card-icon"></i>
-              <div class="card-info">
-                <h3>125</h3>
-                <p>Usuarios registrados</p>
-              </div>
-            </div>
             <div class="summary-card card-products">
               <i class="fas fa-box-open card-icon"></i>
               <div class="card-info">
-                <h3>78</h3>
-                <p>Productos activos</p>
+                <h3>{{ productos.length }}</h3>
+                <p>Productos disponibles</p>
               </div>
             </div>
-            <div class="summary-card card-categories">
-              <i class="fas fa-tags card-icon"></i>
+            <div class="summary-card card-orders">
+              <i class="fas fa-clipboard-list card-icon"></i>
               <div class="card-info">
-                <h3>12</h3>
-                <p>Categorías</p>
+                <h3>{{ pedidos.length }}</h3>
+                <p>Pedidos realizados</p>
               </div>
             </div>
-            <div class="summary-card card-tables">
-              <i class="fas fa-table card-icon"></i>
+            <div class="summary-card card-reservations">
+              <i class="fas fa-calendar-check card-icon"></i>
               <div class="card-info">
-                <h3>24</h3>
-                <p>Mesas disponibles</p>
+                <h3>{{ reservas.length }}</h3>
+                <p>Reservas activas</p>
               </div>
             </div>
           </div>
 
+          <!-- Router view -->
           <router-view />
         </section>
       </main>
     </div>
+
     <div v-else class="no-access">
-      <h2>No tienes permisos para acceder al panel de administración.</h2>
+      <h2>No tienes permisos para acceder al panel de cliente.</h2>
       <router-link to="/">Volver al inicio</router-link>
     </div>
   </div>
 </template>
 
 <script>
-import HeaderAuthenticatedAdmin from '@/components/HeaderAuthenticatedAdmin.vue';
+import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
 
 export default {
-  name: "DashboardLayout",
-  components: { HeaderAuthenticatedAdmin },
+  name: "CustomerDashboardLayout",
+  components: { HeaderAuthenticated },
   data() {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     return {
-      username: user.userName || "Usuario",
-      roles: user.roles || []
+      username: user.userName || "Cliente",
+      roles: user.roles || [],
+      productos: [],
+      pedidos: [],
+      reservas: []
     };
   },
   computed: {
-    isAdminOrEmployee() {
-      return this.roles.some(r => r.name === "ROLE_ADMIN" || r.name === "ROLE_EMPLOYEE");
+    activeRole() {
+      return localStorage.getItem("activeRole") || "ROLE_CUSTOMER";
+    },
+    isCustomer() {
+      return this.activeRole === "ROLE_CUSTOMER";
     }
   },
   methods: {
     cambiarRol() {
-      localStorage.removeItem("activeRole"); // 🔹 eliminamos rol activo
-      this.$router.push("/select-role"); // 🔹 redirigimos para que elija
+      localStorage.removeItem("activeRole");
+      this.$router.push("/select-role");
+    },
+    async cargarProductos() {
+      this.productos = [{id:1},{id:2},{id:3}];
+    },
+    async cargarPedidos() {
+      this.pedidos = [{id:1},{id:2}];
+    },
+    async cargarReservas() {
+      this.reservas = [{id:1}];
     }
+  },
+  mounted() {
+    if (!this.isCustomer) {
+      this.$router.push("/select-role");
+      return;
+    }
+    this.cargarProductos();
+    this.cargarPedidos();
+    this.cargarReservas();
   }
 };
 </script>
@@ -125,19 +140,12 @@ export default {
 }
 
 .dashboard-sidebar {
-  width: 180px;
+  width: 200px;
   background: #580e00;
   color: white;
   padding: 1rem;
   flex-shrink: 0;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
-}
-
-.sidebar-title {
-  font-size: 1.5rem;
-  margin-bottom: 2rem;
-  display: flex;
-  align-items: center;
 }
 
 .dashboard-sidebar ul {
@@ -167,6 +175,7 @@ export default {
   text-decoration: none;
 }
 
+/* Contenido */
 .dashboard-content {
   flex: 1;
   display: flex;
@@ -212,22 +221,10 @@ export default {
   margin-right: 1rem;
 }
 
-.card-users {
-  background: #FF6B35;
-}
-
-.card-products {
-  background: #FF8C00;
-}
-
-.card-categories {
-  background: #FFD700;
-  color: #333;
-}
-
-.card-tables {
-  background: #2ECC71;
-}
+/* Colores específicos */
+.card-products { background: #FF8C00; }
+.card-orders { background: #FF6B35; }
+.card-reservations { background: #3498DB; }
 
 .card-info h3 {
   margin: 0;
@@ -266,6 +263,7 @@ export default {
   font-size: 1rem;
 }
 
+/* Responsive */
 @media (max-width: 1024px) {
   .dashboard-container {
     flex-direction: column;

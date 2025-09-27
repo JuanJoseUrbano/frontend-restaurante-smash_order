@@ -1,6 +1,4 @@
 <template>
-  <HeaderAuthenticatedCustomer :usuario="usuario" />
-
   <div class="text-end mt-3 me-3" v-if="roles.length > 1">
     <button class="btn btn-outline-dark btn-sm" @click="cambiarRol">
       <i class="fas fa-exchange-alt me-1"></i> Cambiar Rol
@@ -119,11 +117,9 @@
 import { mostrarAlerta } from "@/functions.js";
 import { getProducts, searchProducts, filterByCategory, filterByPrice } from "@/services/products";
 import { getCategories } from "@/services/categories";
-import HeaderAuthenticatedCustomer from "@/components/HeaderAuthenticatedCustomer.vue";
 
 export default {
   name: "CatalogoProductos",
-  components: { HeaderAuthenticatedCustomer },
   data() {
     return {
       usuario: JSON.parse(localStorage.getItem("user")) || {}, // 🔹 Aquí guardamos al usuario completo

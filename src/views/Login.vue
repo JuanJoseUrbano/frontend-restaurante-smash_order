@@ -124,11 +124,11 @@ export default {
 
     redirectByRole(role) {
       if (role === "ROLE_ADMIN") {
-        this.$router.push("/dashboard");
+        this.$router.push("/dashboard-admin");
       } else if (role === "ROLE_EMPLOYEE") {
-        this.$router.push("/employee");
+        this.$router.push("/dashboard-employee");
       } else if (role === "ROLE_CUSTOMER") {
-        this.$router.push("/menu");
+        this.$router.push("/dashboard-customer");
       } else {
         this.$router.push("/");
       }
