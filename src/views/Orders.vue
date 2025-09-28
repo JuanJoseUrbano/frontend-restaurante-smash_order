@@ -432,18 +432,17 @@ export default {
                 const confirmado = await confirmar("Eliminar pedido", "¿Deseas eliminar este pedido?");
                 if (confirmado) {
                     await deleteOrder(id);
+                    // ✅ Actualizamos listas sin recargar
+                    this.pedidos = this.pedidos.filter(p => p.id !== id);
+                    this.pedidosOriginales = this.pedidosOriginales.filter(p => p.id !== id);
                     mostrarAlerta("Pedido eliminado", "success");
-                    this.obtenerPedidos();
                 }
             } catch {
                 mostrarAlerta("Error al eliminar el pedido", "danger");
             }
         },
         editarPedido(pedido) {
-            // usamos pedidoSeleccionado para editar (con copia profunda)
             this.pedidoSeleccionado = JSON.parse(JSON.stringify(pedido));
-
-            // Aseguramos subtotales para mostrar y calcular
             if (Array.isArray(this.pedidoSeleccionado.orderDetails)) {
                 this.pedidoSeleccionado.orderDetails.forEach(d => {
                     d.subtotal = (d.subtotal !== undefined) ? d.subtotal : (d.quantity * (d.product?.price || 0));
@@ -451,28 +450,24 @@ export default {
             } else {
                 this.pedidoSeleccionado.orderDetails = [];
             }
-
             this.busquedaCliente = this.pedidoSeleccionado.customer?.name || "";
             this.busquedaEmpleado = this.pedidoSeleccionado.employee?.name || "";
             this.modalEditar.show();
         },
         async guardarCambios() {
             try {
-                // validar cliente y detalles
-                if (!this.pedidoSeleccionado.customer || !this.pedidoSeleccionado.customer.id) {
+                if (!this.pedidoSeleccionado.customer?.id) {
                     mostrarAlerta("Seleccione un cliente válido.", "warning");
                     return;
                 }
-                if (!this.pedidoSeleccionado.orderDetails || !this.pedidoSeleccionado.orderDetails.length) {
+                if (!this.pedidoSeleccionado.orderDetails?.length) {
                     mostrarAlerta("Agregue al menos un producto.", "warning");
                     return;
                 }
-
                 this.recalcularTotal();
 
-                // employee: lo tomamos desde localStorage si está disponible
                 const user = JSON.parse(localStorage.getItem("user")) || null;
-                const employeePayload = user && user.id ? { id: user.id } : null;
+                const employeePayload = user?.id ? { id: user.id } : null;
 
                 const payload = {
                     customer: { id: this.pedidoSeleccionado.customer.id },
@@ -486,15 +481,21 @@ export default {
                 };
 
                 await updateOrder(this.pedidoSeleccionado.id, payload);
+
+                // ✅ Actualizamos en memoria
+                const index = this.pedidos.findIndex(p => p.id === this.pedidoSeleccionado.id);
+                if (index !== -1) {
+                    this.pedidos[index] = { ...this.pedidoSeleccionado };
+                    this.pedidosOriginales[index] = { ...this.pedidoSeleccionado };
+                }
+
                 mostrarAlerta("Pedido actualizado correctamente", "success");
                 this.modalEditar.hide();
-                this.obtenerPedidos();
             } catch {
                 mostrarAlerta("Error al actualizar el pedido", "danger");
             }
         },
 
-        // === FILTROS COMBINADOS ===
         aplicarFiltros() {
             this.pedidos = this.pedidosOriginales.filter(p => {
                 const coincideCliente = !this.filtro.trim() || (p.customer?.name || "").toLowerCase().includes(this.filtro.toLowerCase());
@@ -503,15 +504,9 @@ export default {
                 return coincideCliente && coincideEstado && coincideFecha;
             });
         },
-        filtrarBusqueda() {
-            this.aplicarFiltros();
-        },
-        filtrarPorEstado() {
-            this.aplicarFiltros();
-        },
-        filtrarPorFecha() {
-            this.aplicarFiltros();
-        },
+        filtrarBusqueda() { this.aplicarFiltros(); },
+        filtrarPorEstado() { this.aplicarFiltros(); },
+        filtrarPorFecha() { this.aplicarFiltros(); },
         limpiarFiltros() {
             this.filtro = "";
             this.filtroEstado = "0";
@@ -519,9 +514,7 @@ export default {
             this.pedidos = [...this.pedidosOriginales];
         },
 
-        formatDate(date) {
-            return new Date(date).toLocaleString();
-        },
+        formatDate(date) { return new Date(date).toLocaleString(); },
         badgeClass(status) {
             return {
                 "bg-warning": status === "PENDING",
@@ -568,7 +561,7 @@ export default {
             this.recalcularTotal();
         },
         recalcularTotal() {
-            if (!this.pedidoSeleccionado || !this.pedidoSeleccionado.orderDetails) return;
+            if (!this.pedidoSeleccionado?.orderDetails) return;
             this.pedidoSeleccionado.total = this.pedidoSeleccionado.orderDetails.reduce(
                 (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
                 0
@@ -590,25 +583,23 @@ export default {
         },
         async guardarNuevoPedido() {
             try {
-                // validaciones
-                if (!this.pedidoNuevo.customer || !this.pedidoNuevo.customer.id) {
+                if (!this.pedidoNuevo.customer?.id) {
                     mostrarAlerta("Seleccione un cliente para el pedido.", "warning");
                     return;
                 }
-                if (!this.pedidoNuevo.table || !this.pedidoNuevo.table.id) {
+                if (!this.pedidoNuevo.table?.id) {
                     mostrarAlerta("Seleccione una mesa.", "warning");
                     return;
                 }
-                if (!this.pedidoNuevo.orderDetails || !this.pedidoNuevo.orderDetails.length) {
+                if (!this.pedidoNuevo.orderDetails?.length) {
                     mostrarAlerta("Agregue al menos un producto.", "warning");
                     return;
                 }
 
                 this.recalcularTotalNuevo();
 
-                // employee: lo tomamos desde localStorage si está disponible
                 const user = JSON.parse(localStorage.getItem("user")) || null;
-                const employeePayload = user && user.id ? { id: user.id } : null;
+                const employeePayload = user?.id ? { id: user.id } : null;
 
                 const payload = {
                     customer: { id: this.pedidoNuevo.customer.id },
@@ -621,10 +612,14 @@ export default {
                     }))
                 };
 
-                await createOrder(payload);
+                const nuevoPedido = await createOrder(payload);
+
+                // ✅ Insertar directamente en memoria
+                this.pedidos.push(nuevoPedido);
+                this.pedidosOriginales.push(nuevoPedido);
+
                 mostrarAlerta("Pedido creado correctamente", "success");
                 this.modalNuevo.hide();
-                this.obtenerPedidos();
             } catch (err) {
                 console.error(err);
                 mostrarAlerta("Error al crear el pedido", "danger");
@@ -662,14 +657,14 @@ export default {
             this.recalcularTotalNuevo();
         },
         recalcularTotalNuevo() {
-            if (!this.pedidoNuevo || !this.pedidoNuevo.orderDetails) return;
+            if (!this.pedidoNuevo?.orderDetails) return;
             this.pedidoNuevo.total = this.pedidoNuevo.orderDetails.reduce(
                 (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
                 0
             );
         },
 
-        // === BUSCAR CLIENTE usada por ambos modales ===
+        // === BUSCAR CLIENTE ===
         async buscarClientes() {
             if (!this.busquedaCliente.trim() || this.busquedaCliente.length < 2) {
                 this.resultadosCliente = [];
@@ -681,7 +676,6 @@ export default {
                 mostrarAlerta("Error al buscar clientes", "danger");
             }
         },
-        // seleccionarCliente (para editar)
         seleccionarCliente(cliente) {
             if (!this.pedidoSeleccionado) return;
             this.pedidoSeleccionado.customer = { id: cliente.id, name: cliente.name };
@@ -691,10 +685,6 @@ export default {
     },
 };
 </script>
-
-
-
-
 
 
 <style>
