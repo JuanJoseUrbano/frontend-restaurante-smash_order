@@ -16,15 +16,12 @@
           </button>
 
         </div>
-
-        <!-- Búsqueda -->
-        <div class="col-md">
-          <div class="input-group">
-            <input type="text" class="form-control search-input" v-model="filtro" placeholder="Buscar por nombre..." />
-            <button @click="filtrarBusqueda" class="btn btn-primary">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
+        <!-- Búsqueda (input más largo) -->
+        <div class="search-group">
+          <input type="text" class="search-input" v-model="filtro" placeholder="Buscar por nombre..." />
+          <button @click="filtrarBusqueda" class="btn-buscar">
+            <i class="fas fa-search"></i>
+          </button>
         </div>
 
         <!-- Categoría -->
@@ -559,34 +556,73 @@ export default {
   border-right: none;
 }
 
+/* Botón agregar producto más corto */
 .btn-guardar {
-  background: #580e00;
+  padding: 0.25rem 0.6rem; /* más corto */
+  font-size: 0.8rem;       /* texto más chico */
+  border-radius: 12px;
+  background-color: var(--primary-color);
   color: white;
-  border: none;
-  border-radius: 20px;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  /* más pequeño */
-  font-size: 0.85rem;
-  /* texto más chico */
+  transition: all 0.3s ease;
 }
 
 .btn-guardar:hover {
-  background: #7a2c1a;
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
 }
 
-
-.input-precio {
-  max-width: 80px;
-  flex: none;
-  text-align: center;
+/* Búsqueda personalizada (input más largo) */
+.search-group {
+  display: flex;
+  max-width: 400px; /* más ancho */
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-/* Botón del filtro */
-.btn-precio {
-  white-space: nowrap;
-  /* evita que se parta el texto */
+.search-group .search-input {
+  flex: 1;
+  border: 1px solid var(--primary-color);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: all 0.3s ease;
 }
+
+.search-group .search-input:focus {
+  box-shadow: 0 0 6px rgba(88, 14, 0, 0.3);
+  border-color: var(--primary-dark);
+}
+
+/* Botón buscar */
+.btn-buscar {
+  background-color: var(--primary-color);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0 8px 8px 0;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-buscar:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+}
+
+/* Badge resultados */
+.results-badge .badge {
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 20px;
+}
+
 
 
 

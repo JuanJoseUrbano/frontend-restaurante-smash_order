@@ -13,6 +13,8 @@ import Tables from "@/views/Tables.vue";
 import Orders from "@/views/Orders.vue";
 import SelectRolePage from "@/views/SelectRolePage.vue";
 import Menu from "@/views/Menu.vue";
+import CustomerTables from "@/views/CustomerTables.vue";
+import Reservation from "@/views/Reservation.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -34,6 +36,7 @@ const routes = [
       { path: "categories", component: Categories },
       { path: "tables", component: Tables },
       { path: "orders", component: Orders },
+      {path: "reservations", component: Reservation}
     ],
   },
 
@@ -46,6 +49,7 @@ const routes = [
       { path: "products", component: Products },
       { path: "tables", component: Tables },
       { path: "orders", component: Orders },
+      {path: "reservations", component: Reservation}
     ],
   },
 
@@ -54,7 +58,8 @@ const routes = [
     component: DashboardCustomer,
     meta: { requiresAuth: true, role: "ROLE_CUSTOMER" },
     children: [
-      { path: "menu", component: Menu },         
+      { path: "menu", component: Menu },   
+      { path: "tables", component: CustomerTables }      
     ],
   },
 

@@ -21,7 +21,7 @@
           <div class="input-group search-small">
             <input type="number" min="1" class="form-control search-input" v-model="filtroNumero"
               placeholder="Buscar" />
-            <button @click="buscarPorNumero" class="btn btn-primary">
+            <button @click="buscarPorNumero" class="btn btn-buscar">
               <i class="fas fa-search"></i>
             </button>
           </div>
@@ -115,12 +115,9 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <!-- Número de mesa -->
             <label for="numeroMesaNueva" class="form-label">Número de mesa</label>
             <input id="numeroMesaNueva" v-model.number="mesaNueva.number" type="number" min="1"
               class="form-control mb-3" placeholder="Ej: 5" />
-
-            <!-- Capacidad -->
             <label for="capacidadMesaNueva" class="form-label">Capacidad</label>
             <input id="capacidadMesaNueva" v-model.number="mesaNueva.capacity" type="number" min="1"
               class="form-control mb-3" placeholder="Ej: 4 personas" />
@@ -142,17 +139,12 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
-            <!-- Número de mesa -->
             <label for="numeroMesaEditada" class="form-label">Número de mesa</label>
             <input id="numeroMesaEditada" v-model.number="mesaEditada.number" type="number" min="1"
               class="form-control mb-3" placeholder="Ej: 5" />
-
-            <!-- Capacidad -->
             <label for="capacidadMesaEditada" class="form-label">Capacidad</label>
             <input id="capacidadMesaEditada" v-model.number="mesaEditada.capacity" type="number" min="1"
               class="form-control mb-3" placeholder="Ej: 4 personas" />
-
-            <!-- Estado -->
             <label for="estadoMesaEditada" class="form-label">Estado</label>
             <select id="estadoMesaEditada" v-model="mesaEditada.status" class="form-select mb-3 w-75">
               <option value="AVAILABLE">Disponible</option>
@@ -167,7 +159,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -214,7 +205,6 @@ export default {
         this.cargando = false;
       }
     },
-
     async buscarPorNumero() {
       if (!this.filtroNumero) return this.obtenerMesas();
       try {
@@ -224,7 +214,6 @@ export default {
         mostrarAlerta('Mesa no encontrada', 'warning');
       }
     },
-
     async filtrarPorEstado() {
       if (!this.filtroEstado) return this.obtenerMesas();
       try {
@@ -233,13 +222,11 @@ export default {
         mostrarAlerta('Error al filtrar por estado', 'danger');
       }
     },
-
     limpiarFiltros() {
       this.filtroNumero = '';
       this.filtroEstado = '';
       this.obtenerMesas();
     },
-
     async guardarMesa() {
       try {
         await createTable(this.mesaNueva);
@@ -251,7 +238,6 @@ export default {
         mostrarAlerta('Error al guardar la mesa', 'danger');
       }
     },
-
     async obtenerPorId(id) {
       try {
         this.mesaEditada = await getTableById(id);
@@ -260,7 +246,6 @@ export default {
         mostrarAlerta('Error al obtener la mesa', 'danger');
       }
     },
-
     async actualizarMesa() {
       try {
         await updateTable(this.mesaEditada);
@@ -271,7 +256,6 @@ export default {
         mostrarAlerta('Error al actualizar la mesa', 'danger');
       }
     },
-
     async eliminarMesa(id) {
       try {
         const confirmado = await confirmar(
@@ -289,13 +273,12 @@ export default {
         mostrarAlerta("Error al eliminar la mesa", "danger");
       }
     }
-
   }
 };
 </script>
 
-
 <style>
+/* === HEADER === */
 .mesas-header {
   text-align: center;
   margin-bottom: 2rem;
@@ -304,20 +287,18 @@ export default {
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
 }
-
 .mesas-title {
   color: var(--primary-color);
   font-weight: 700;
   margin-bottom: 0.5rem;
   font-size: 2.2rem;
 }
-
 .mesas-subtitle {
   color: var(--text-light);
   font-size: 1.1rem;
 }
 
-/* === Acciones === */
+/* === ACCIONES === */
 .mesas-actions {
   display: flex;
   justify-content: space-between;
@@ -325,6 +306,7 @@ export default {
   padding: 1rem;
 }
 
+/* Botón agregar */
 .btn-guardar {
   background-color: var(--primary-color) !important;
   border-color: var(--primary-color) !important;
@@ -334,7 +316,6 @@ export default {
   padding: 0.75rem 1.5rem;
   transition: all 0.3s ease;
 }
-
 .btn-guardar:hover {
   background-color: var(--primary-dark) !important;
   border-color: var(--primary-dark) !important;
@@ -342,7 +323,26 @@ export default {
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
 }
 
-/* === Tabla Mesas === */
+/* Botón buscar */
+.btn-buscar {
+  background-color: var(--primary-color);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+.btn-buscar:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+}
+
+/* === TABLA MESAS === */
 .mesas-table-container {
   background: white;
   border-radius: 16px;
@@ -350,17 +350,10 @@ export default {
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
   overflow: hidden;
 }
-
-.mesas-table {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
 .mesas-table thead {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: white;
 }
-
 .mesas-table th {
   font-weight: 600;
   padding: 1rem;
@@ -368,12 +361,10 @@ export default {
   font-size: 0.9rem;
   letter-spacing: 0.5px;
 }
-
 .mesa-row {
   transition: all 0.2s ease;
   border-bottom: 1px solid #eee;
 }
-
 .mesa-row:hover {
   background-color: #f8f9fa;
   transform: translateX(4px);
@@ -392,7 +383,6 @@ export default {
   padding: 3rem;
   color: var(--text-light);
 }
-
 .loading-spinner .spinner-border {
   width: 3rem;
   height: 3rem;
@@ -405,13 +395,11 @@ export default {
   padding: 3rem;
   color: var(--text-light);
 }
-
 .empty-icon {
   font-size: 4rem;
   color: #dee2e6;
   margin-bottom: 1rem;
 }
-
 .empty-state h4 {
   color: var(--text-dark);
   margin-bottom: 0.5rem;
@@ -423,13 +411,11 @@ export default {
   justify-content: center;
   gap: 0.5rem;
 }
-
 .action-buttons .btn {
   border-radius: 6px;
   padding: 0.4rem 0.8rem;
   transition: all 0.2s ease;
 }
-
 .action-buttons .btn:hover {
   transform: translateY(-2px);
 }
@@ -440,20 +426,16 @@ export default {
   border: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
-
 .modal-header {
   border-radius: 16px 16px 0 0;
   padding: 1.2rem 1.5rem;
 }
-
 .modal-title {
   font-weight: 600;
 }
-
 .modal-body {
   padding: 1.5rem;
 }
-
 .modal-footer {
   border-radius: 0 0 16px 16px;
   padding: 1.2rem 1.5rem;
@@ -464,18 +446,15 @@ export default {
   .mesas-container {
     padding: 1rem;
   }
-
   .mesas-actions {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
-
   .action-buttons {
     flex-direction: column;
     gap: 0.5rem;
   }
-
   .modal-dialog {
     margin: 1rem;
   }
