@@ -11,19 +11,17 @@
       <div class="row g-3 align-items-center">
         <!-- Botón agregar -->
         <div class="col-md-auto">
-          <button class="btn btn-guardar d-flex align-items-center" @click="modalAgregar.show()">
+          <button class="btn btn-guardar btn-sm d-flex align-items-center" @click="modalAgregar.show()">
             <i class="fas fa-plus-circle me-2"></i> Nuevo Producto
           </button>
-        </div>
 
-        <!-- Búsqueda -->
-        <div class="col-md">
-          <div class="input-group">
-            <input type="text" class="form-control search-input" v-model="filtro" placeholder="Buscar por nombre..." />
-            <button @click="filtrarBusqueda" class="btn btn-primary">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
+        </div>
+        <!-- Búsqueda (input más largo) -->
+        <div class="search-group">
+          <input type="text" class="search-input" v-model="filtro" placeholder="Buscar por nombre..." />
+          <button @click="filtrarBusqueda" class="btn-buscar">
+            <i class="fas fa-search"></i>
+          </button>
         </div>
 
         <!-- Categoría -->
@@ -166,56 +164,81 @@
 
 
 <script>
-import { mostrarAlerta, confirmar } from '@/functions.js';
-import axios from 'axios';
-import Modal from 'bootstrap/js/dist/modal';
+import { mostrarAlerta, confirmar } from "@/functions.js";
+import Modal from "bootstrap/js/dist/modal";
+
+import {
+  getProducts,
+  getProductById,
+  searchProducts,
+  filterByCategory,
+  filterByPrice,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "@/services/products";
+
+import { getCategories } from "@/services/categories";
 
 export default {
-  name: 'GestionProductos',
+  name: "GestionProductos",
   data() {
     return {
-      urlApi: 'http://localhost:8080/smash-order/api',
       productos: [],
       categorias: [],
       productoNuevo: {
-        name: '',
-        description: '',
+        name: "",
+        description: "",
         price: 0,
-        category: { id: 0 }
+        category: { id: 0 },
       },
       productoEditado: {
         id: 0,
-        name: '',
-        description: '',
+        name: "",
+        description: "",
         price: 0,
-        category: { id: 0 }
+        category: { id: 0 },
       },
       cargando: false,
       modalAgregar: null,
       modalEditar: null,
+      filtro: "",
+      filtroCategoria: 0,
       precioMin: 0,
-      precioMax: 0
+      precioMax: 0,
     };
   },
   mounted() {
-    this.modalAgregar = new Modal(document.getElementById('modalGuardarProducto'));
-    this.modalEditar = new Modal(document.getElementById('modalEditarProducto'));
+    this.modalAgregar = new Modal(
+      document.getElementById("modalGuardarProducto")
+    );
+    this.modalEditar = new Modal(
+      document.getElementById("modalEditarProducto")
+    );
     this.obtenerProductos();
     this.obtenerCategorias();
   },
   methods: {
     validarProducto(producto) {
-      if (!producto.name || producto.name.trim() === '') {
-        mostrarAlerta('Información inválida', 'info', 'Ingrese el nombre');
+      if (!producto.name?.trim()) {
+        mostrarAlerta("Información inválida", "info", "Ingrese el nombre");
         return false;
-      } else if (!producto.description || producto.description.trim() === '') {
-        mostrarAlerta('Información inválida', 'info', 'Ingrese la descripción');
+      } else if (!producto.description?.trim()) {
+        mostrarAlerta("Información inválida", "info", "Ingrese la descripción");
         return false;
       } else if (isNaN(producto.price) || producto.price <= 0) {
-        mostrarAlerta('Información inválida', 'info', 'Ingrese el precio correctamente');
+        mostrarAlerta(
+          "Información inválida",
+          "info",
+          "Ingrese el precio correctamente"
+        );
         return false;
       } else if (!producto.category || producto.category.id === 0) {
-        mostrarAlerta('Información incompleta', 'info', 'Seleccione una categoría');
+        mostrarAlerta(
+          "Información incompleta",
+          "info",
+          "Seleccione una categoría"
+        );
         return false;
       }
       return true;
@@ -224,10 +247,9 @@ export default {
     async obtenerProductos() {
       this.cargando = true;
       try {
-        const res = await axios.get(this.urlApi + '/products');
-        this.productos = res.data;
+        this.productos = await getProducts();
       } catch (error) {
-        mostrarAlerta('Error al cargar los productos', 'danger');
+        mostrarAlerta("Error al cargar los productos", "danger");
       } finally {
         this.cargando = false;
       }
@@ -235,118 +257,104 @@ export default {
 
     async obtenerCategorias() {
       try {
-        const res = await axios.get(this.urlApi + '/categories');
-        this.categorias = res.data;
+        this.categorias = await getCategories();
       } catch (error) {
-        mostrarAlerta('Error al cargar las categorías', 'danger');
+        mostrarAlerta("Error al cargar las categorías", "danger");
       }
     },
 
     async filtrarBusqueda() {
       if (!this.filtro.trim()) return this.obtenerProductos();
       try {
-        const res = await axios.get(`${this.urlApi}/products/search?name=${this.filtro}`, {
-          params: { q: this.filtro }
-        });
-        this.productos = res.data;
+        this.productos = await searchProducts(this.filtro);
       } catch {
-        mostrarAlerta('Error en la búsqueda', 'danger');
+        mostrarAlerta("Error en la búsqueda", "danger");
       }
     },
 
     async filtrarPorCategoria() {
       if (this.filtroCategoria == 0) return this.obtenerProductos();
       try {
-        const res = await axios.get(`${this.urlApi}/products/category/${this.filtroCategoria}`);
-        this.productos = res.data;
+        this.productos = await filterByCategory(this.filtroCategoria);
       } catch {
-        mostrarAlerta('Error al filtrar por categoría', 'danger');
+        mostrarAlerta("Error al filtrar por categoría", "danger");
       }
     },
 
     async filtrarPorPrecio() {
       try {
-        const res = await axios.get(`${this.urlApi}/products/price-range?minPrice=${this.precioMin}&maxPrice=${this.precioMax}`)
-        this.productos = res.data;
+        this.productos = await filterByPrice(this.precioMin, this.precioMax);
       } catch {
-        mostrarAlerta('Error al filtrar por precio', 'danger');
+        mostrarAlerta("Error al filtrar por precio", "danger");
       }
     },
 
     limpiarFiltros() {
-      this.filtro = '';
+      this.filtro = "";
       this.filtroCategoria = 0;
-      this.precioMin = '';
-      this.precioMax = '';
+      this.precioMin = "";
+      this.precioMax = "";
       this.obtenerProductos();
     },
 
     async guardarProducto() {
       if (!this.validarProducto(this.productoNuevo)) return;
       try {
-        await axios.post(this.urlApi + '/products', this.productoNuevo);
-        this.productoNuevo = { name: '', description: '', price: 0, category: { id: 0 } };
-        mostrarAlerta('Producto guardado exitosamente', 'success');
+        await createProduct(this.productoNuevo);
+        this.productoNuevo = {
+          name: "",
+          description: "",
+          price: 0,
+          category: { id: 0 },
+        };
+        mostrarAlerta("Producto guardado exitosamente", "success");
         this.obtenerProductos();
         this.modalAgregar.hide();
       } catch (error) {
-        mostrarAlerta('Error al guardar el producto', 'danger');
+        mostrarAlerta("Error al guardar el producto", "danger");
       }
     },
 
     async obtenerPorId(id) {
       try {
-        const res = await axios.get(`${this.urlApi}/products/${id}`);
-        this.productoEditado = res.data;
+        this.productoEditado = await getProductById(id);
         this.modalEditar.show();
       } catch (error) {
-        mostrarAlerta('Error al obtener los datos para editar', 'danger');
+        mostrarAlerta("Error al obtener los datos para editar", "danger");
       }
     },
 
     async actualizarProducto() {
       if (!this.validarProducto(this.productoEditado)) return;
       try {
-        await axios.put(`${this.urlApi}/products/${this.productoEditado.id}`, this.productoEditado);
-        mostrarAlerta('Producto actualizado correctamente', 'success');
+        await updateProduct(this.productoEditado);
+        mostrarAlerta("Producto actualizado correctamente", "success");
         this.obtenerProductos();
         this.modalEditar.hide();
       } catch (error) {
-        mostrarAlerta('Error al actualizar el producto', 'danger');
+        mostrarAlerta("Error al actualizar el producto", "danger");
       }
     },
 
     async eliminarProducto(id) {
       try {
-        confirmar(`${this.urlApi}/products/${id}`, 'Eliminar producto', '¿Estás seguro de eliminar este producto?');
-        this.obtenerProductos();
+        const confirmado = await confirmar("Eliminar producto", "¿Estás seguro de eliminar este producto?");
+        if (confirmado) {
+          await deleteProduct(id);
+          mostrarAlerta("Eliminado", "success");
+          this.obtenerProductos();
+        } else {
+          mostrarAlerta("Operación cancelada", "info");
+        }
       } catch (error) {
-        mostrarAlerta('Error al eliminar el producto', 'danger');
+        mostrarAlerta("Error al eliminar el producto", "danger");
       }
-    }
-  }
+    },
+  },
 };
 </script>
+
 <style>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-:root {
-  --primary-color: #580E00;
-  --primary-light: #7a2c1a;
-  --primary-dark: #3d0900;
-  --accent-color: #FF8C00;
-  --text-dark: #2C3E50;
-  --text-light: #7F8C8D;
-  --background-light: #FFF9F0;
-}
-
-.productos-container {
-  padding: 2rem;
-  background-color: var(--background-light);
-  min-height: 100vh;
-}
-
 .productos-header {
   text-align: center;
   margin-bottom: 2rem;
@@ -548,31 +556,73 @@ export default {
   border-right: none;
 }
 
+/* Botón agregar producto más corto */
 .btn-guardar {
-  background-color: #580E00 !important;
-  /* tu color */
-  border-color: #580E00 !important;
-  color: #fff !important;
-  /* texto blanco */
+  padding: 0.25rem 0.6rem; /* más corto */
+  font-size: 0.8rem;       /* texto más chico */
+  border-radius: 12px;
+  background-color: var(--primary-color);
+  color: white;
+  transition: all 0.3s ease;
 }
 
 .btn-guardar:hover {
-  background-color: #3d0900 !important;
-  /* un poco más oscuro al pasar el mouse */
-  border-color: #3d0900 !important;
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
 }
 
-.input-precio {
-  max-width: 80px;
-  flex: none;
-  text-align: center;
+/* Búsqueda personalizada (input más largo) */
+.search-group {
+  display: flex;
+  max-width: 400px; /* más ancho */
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-/* Botón del filtro */
-.btn-precio {
-  white-space: nowrap;
-  /* evita que se parta el texto */
+.search-group .search-input {
+  flex: 1;
+  border: 1px solid var(--primary-color);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: all 0.3s ease;
 }
+
+.search-group .search-input:focus {
+  box-shadow: 0 0 6px rgba(88, 14, 0, 0.3);
+  border-color: var(--primary-dark);
+}
+
+/* Botón buscar */
+.btn-buscar {
+  background-color: var(--primary-color);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0 8px 8px 0;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-buscar:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+}
+
+/* Badge resultados */
+.results-badge .badge {
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 20px;
+}
+
 
 
 

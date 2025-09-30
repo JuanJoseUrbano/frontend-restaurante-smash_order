@@ -44,7 +44,6 @@ export default {
   background-color: #580e00; /* Igual al header */
   color: #ffffff;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  border-top: 2px solid #7a2710;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
 }
 

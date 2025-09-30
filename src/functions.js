@@ -2,10 +2,11 @@ import Swal from "sweetalert2";
 import axios from "axios";
 
 export function mostrarAlerta(titulo, icono, mensaje) {
-  Swal.fire({
+  return Swal.fire({
     title: titulo,
     icon: icono,
     text: mensaje,
+    confirmButtonText: "OK",
     customClass: {
       confirmButtonColor: "btn btn-primary",
       popup: "animated zoomIn",
@@ -13,8 +14,8 @@ export function mostrarAlerta(titulo, icono, mensaje) {
   });
 }
 
-export function confirmar(url, titulo, mensaje) {
-  return Swal.fire({
+export async function confirmar(titulo, mensaje, url) {
+  const resultado = await Swal.fire({
     title: titulo,
     text: mensaje,
     icon: "warning",
@@ -23,14 +24,19 @@ export function confirmar(url, titulo, mensaje) {
     cancelButtonColor: "#d33",
     confirmButtonText: "Sí, eliminar",
     cancelButtonText: "Cancelar",
-  }).then((resultado) => {
-    if (resultado.isConfirmed) {
-      return axios.delete(url).then(() => {
-        mostrarAlerta("Eliminado", "success");
-        window.location.reload(); // Recarga la página completa.
-      });
-    } else {
-      mostrarAlerta("Operación cancelada", "info");
-    }
   });
+
+  if (resultado.isConfirmed && url) {
+    try {
+      await axios.delete(url);
+      mostrarAlerta("Eliminado", "success", "El elemento ha sido eliminado correctamente.");
+      window.location.reload();
+    } catch (error) {
+      mostrarAlerta("Error", "error", "No se pudo eliminar el elemento.");
+    }
+  } else if (resultado.dismiss) {
+    mostrarAlerta("Operación cancelada", "info", "La acción fue cancelada por el usuario.");
+  }
+
+  return resultado.isConfirmed;
 }

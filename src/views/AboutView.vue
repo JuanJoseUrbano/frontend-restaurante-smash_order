@@ -1,4 +1,5 @@
 <template>
+  <PublicHeader />
   <div class="container py-5 about-view">
     <div class="row">
       <div class="col-lg-8 mx-auto">
@@ -137,8 +138,13 @@
 </template>
 
 <script>
+import PublicHeader from '@/components/PublicHeader.vue';
+
 export default {
   name: "AboutView",
+   components: {
+    PublicHeader
+  }
 };
 </script>
 
