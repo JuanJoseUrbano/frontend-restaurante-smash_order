@@ -1,12 +1,7 @@
 <template>
+  <!-- Header -->
+    <HeaderAuthenticated :username="username" :roles="roles" :active-role="activeRole" />
   <div>
-    <!-- Header -->
-    <HeaderAuthenticated 
-      :username="username" 
-      :roles="roles" 
-      :active-role="activeRole" 
-    />
-
     <div v-if="isCustomer" class="dashboard-container">
       <!-- Sidebar -->
       <aside class="dashboard-sidebar">
@@ -17,6 +12,12 @@
                 <i class="fas fa-box-open me-2"></i> Menu
               </router-link>
             </li>
+            <li>
+              <router-link to="/dashboard-customer/tables">
+                <i class="fas fa-chair me-2"></i> Mesas
+              </router-link>
+            </li>
+
             <li>
               <router-link to="/dashboard-customer/orders">
                 <i class="fas fa-clipboard-list me-2"></i> Mis Pedidos
@@ -111,13 +112,13 @@ export default {
       this.$router.push("/select-role");
     },
     async cargarProductos() {
-      this.productos = [{id:1},{id:2},{id:3}];
+      this.productos = [{ id: 1 }, { id: 2 }, { id: 3 }];
     },
     async cargarPedidos() {
-      this.pedidos = [{id:1},{id:2}];
+      this.pedidos = [{ id: 1 }, { id: 2 }];
     },
     async cargarReservas() {
-      this.reservas = [{id:1}];
+      this.reservas = [{ id: 1 }];
     }
   },
   mounted() {

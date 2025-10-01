@@ -124,7 +124,6 @@ export default {
 };
 </script>
 
-
 <style scoped>
 .dashboard-container {
   display: flex;

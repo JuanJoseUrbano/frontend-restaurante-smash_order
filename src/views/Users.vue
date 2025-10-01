@@ -10,7 +10,7 @@
             <div class="row g-3 align-items-center">
                 <!-- Botón agregar -->
                 <div class="col-md-auto">
-                    <button class="btn btn-guardar d-flex align-items-center" @click="modalAgregar.show()">
+                    <button class="btn-guardar d-flex align-items-center" @click="modalAgregar.show()">
                         <i class="fas fa-plus-circle me-2"></i> Agregar Usuario
                     </button>
                 </div>
@@ -19,7 +19,7 @@
                     <div class="input-group">
                         <input type="text" class="form-control search-input" v-model="filtro"
                             placeholder="Buscar usuario por email..." />
-                        <button @click="filtrarBusqueda" class="btn btn-primary">
+                        <button @click="filtrarBusqueda" class="btn-guardar">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
@@ -27,7 +27,7 @@
 
                 <!-- Limpiar -->
                 <div class="col-md-auto">
-                    <button class="btn btn-outline-secondary" @click="limpiarFiltros">
+                    <button class="btn-outline-secondary" @click="limpiarFiltros">
                         <i class="fas fa-eraser me-1"></i> Limpiar
                     </button>
                 </div>
@@ -81,15 +81,15 @@
                                     <span v-if="r.name === 'ROLE_ADMIN'">Administrador</span>
                                     <span v-else-if="r.name === 'ROLE_CUSTOMER'">Cliente</span>
                                     <span v-else-if="r.name === 'ROLE_EMPLOYEE'">Empleado</span>
-                                    <span v-else>{{ r.name }}</span> <!-- fallback por si aparece otro rol -->
+                                    <span v-else>{{ r.name }}</span>
                                 </span>
                             </td>
                             <td class="text-center">
                                 <div class="action-buttons">
-                                    <button class="btn btn-sm btn-outline-warning me-2" @click="obtenerPorId(u.id)">
+                                    <button class="btn-outline-warning me-2" @click="obtenerPorId(u.id)">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button @click="eliminarUsuario(u.id)" class="btn btn-sm btn-outline-danger">
+                                    <button @click="eliminarUsuario(u.id)" class="btn-outline-danger">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </div>
@@ -136,9 +136,8 @@
                                 required
                                 pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" />
                             <label for="contrasenia">Contraseña</label>
-                            <!-- Botón de mostrar/ocultar -->
                             <button type="button"
-                                class="btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                                class="btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
                                 @click="togglePasswordVisibility"
                                 :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                                 <i :class="showPassword ? 'far fa-eye-slash' : 'far fa-eye'"></i>
@@ -165,10 +164,10 @@
 
                     <!-- Footer -->
                     <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <button class="btn-outline-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-times me-1"></i> Cancelar
                         </button>
-                        <button class="btn btn-success" @click="guardarUsuario">
+                        <button class="btn-guardar" @click="guardarUsuario">
                             <i class="fas fa-save me-1"></i> Guardar
                         </button>
                     </div>
@@ -210,7 +209,7 @@
                                 v-model="usuarioEditado.password" class="form-control" placeholder="Nueva contraseña" />
                             <label for="editContrasenia">Contraseña (opcional)</label>
                             <button type="button"
-                                class="btn btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
+                                class="btn-outline-secondary position-absolute top-50 end-0 translate-middle-y me-2"
                                 @click="togglePasswordVisibility"
                                 :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                                 <i :class="showPassword ? 'far fa-eye-slash' : 'far fa-eye'"></i>
@@ -234,10 +233,10 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <button class="btn-outline-secondary" data-bs-dismiss="modal">
                             <i class="fas fa-times me-1"></i> Cancelar
                         </button>
-                        <button class="btn btn-warning" @click="actualizarUsuario">
+                        <button class="btn-warning" @click="actualizarUsuario">
                             <i class="fas fa-save me-1"></i> Actualizar
                         </button>
                     </div>
@@ -246,6 +245,240 @@
         </div>
     </div>
 </template>
+
+<style>
+.usuarios-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
+}
+
+.usuarios-title {
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 2.2rem;
+}
+
+.usuarios-subtitle {
+    color: var(--text-light);
+    font-size: 1.1rem;
+}
+
+.usuarios-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.usuarios-actions button {
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.usuarios-actions button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.2);
+}
+
+.search-input {
+    border: 2px solid #e9ecef;
+    border-radius: 8px 0 0 8px;
+    padding: 0.75rem;
+}
+
+.usuarios-table-container {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
+    overflow: hidden;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-light);
+}
+
+.loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+}
+
+.usuario-row {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #eee;
+}
+
+.usuario-row:hover {
+    background-color: #f8f9fa;
+    transform: translateX(4px);
+}
+
+.usuario-name {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.action-buttons button {
+    border-radius: 6px;
+    padding: 0.4rem 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.action-buttons button:hover {
+    transform: translateY(-2px);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-light);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+}
+
+.empty-state h4 {
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    border-radius: 16px 16px 0 0;
+    padding: 1.2rem 1.5rem;
+}
+
+.modal-title {
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-radius: 0 0 16px 16px;
+    padding: 1.2rem 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(88, 14, 0, 0.1);
+}
+
+.btn-guardar {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.btn-guardar:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+.btn-outline-secondary {
+    background-color: transparent;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border: 2px solid #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #e0a800;
+}
+
+.btn-outline-warning {
+    background-color: transparent;
+    border: 2px solid #ffc107;
+    color: #ffc107;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-outline-danger {
+    background-color: transparent;
+    border: 2px solid #dc3545;
+    color: #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .usuarios-container {
+        padding: 1rem;
+    }
+
+    .usuarios-actions {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .modal-dialog {
+        margin: 1rem;
+    }
+}
+</style>
+
 
 <script>
 import { mostrarAlerta, confirmar } from "@/functions.js";
@@ -427,192 +660,3 @@ export default {
     }
 };
 </script>
-
-<style>
-.usuarios-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
-}
-
-.usuarios-title {
-    color: var(--primary-color);
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    font-size: 2.2rem;
-}
-
-.usuarios-subtitle {
-    color: var(--text-light);
-    font-size: 1.1rem;
-}
-
-.usuarios-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.usuarios-actions .btn {
-    font-weight: 600;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.usuarios-actions .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.2);
-}
-
-.search-input {
-    border: 2px solid #e9ecef;
-    border-radius: 8px 0 0 8px;
-    padding: 0.75rem;
-}
-
-.usuarios-table-container {
-    background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
-    overflow: hidden;
-}
-
-.loading-spinner {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-light);
-}
-
-.loading-spinner .spinner-border {
-    width: 3rem;
-    height: 3rem;
-    margin-bottom: 1rem;
-}
-
-.usuario-row {
-    transition: all 0.2s ease;
-    border-bottom: 1px solid #eee;
-}
-
-.usuario-row:hover {
-    background-color: #f8f9fa;
-    transform: translateX(4px);
-}
-
-.usuario-name {
-    font-weight: 600;
-    color: var(--text-dark);
-}
-
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.action-buttons .btn {
-    border-radius: 6px;
-    padding: 0.4rem 0.8rem;
-    transition: all 0.2s ease;
-}
-
-.action-buttons .btn:hover {
-    transform: translateY(-2px);
-}
-
-.empty-state {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-light);
-}
-
-.empty-icon {
-    font-size: 4rem;
-    color: #dee2e6;
-    margin-bottom: 1rem;
-}
-
-.empty-state h4 {
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-}
-
-.modal-content {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    border-radius: 16px 16px 0 0;
-    padding: 1.2rem 1.5rem;
-}
-
-.modal-title {
-    font-weight: 600;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.modal-footer {
-    border-radius: 0 0 16px 16px;
-    padding: 1.2rem 1.5rem;
-}
-
-.form-label {
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-}
-
-.form-control,
-.form-select {
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 0.75rem;
-    transition: all 0.3s ease;
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(88, 14, 0, 0.1);
-}
-
-.btn-guardar {
-    background-color: var(--primary-color) !important;
-    border-color: var(--primary-color) !important;
-    color: #fff !important;
-}
-
-.btn-guardar:hover {
-    background-color: var(--primary-dark) !important;
-    border-color: var(--primary-dark) !important;
-}
-
-@media (max-width: 768px) {
-    .usuarios-container {
-        padding: 1rem;
-    }
-
-    .usuarios-actions {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .modal-dialog {
-        margin: 1rem;
-    }
-}
-</style>

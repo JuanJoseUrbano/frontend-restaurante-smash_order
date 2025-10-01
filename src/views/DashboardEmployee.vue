@@ -1,12 +1,12 @@
 <template>
-  <div>
-    <HeaderAuthenticated 
+  <HeaderAuthenticated 
       :username="username" 
       :roles="roles" 
       :active-role="activeRole" 
     />
-
+  <div>
     <div v-if="isEmployee" class="dashboard-container">
+      <!-- Sidebar -->
       <aside class="dashboard-sidebar">
         <nav>
           <ul>
@@ -34,6 +34,7 @@
         </nav>
       </aside>
 
+      <!-- Contenido principal -->
       <main class="dashboard-content">
         <header class="dashboard-header d-flex justify-content-between align-items-center">
           <h1>Bienvenido, {{ username }}</h1>
@@ -45,36 +46,39 @@
         </header>
 
         <section class="dashboard-main">
+          <!-- Cards resumen -->
           <div class="cards-container">
             <div class="summary-card card-products">
               <i class="fas fa-box-open card-icon"></i>
               <div class="card-info">
-                <h3>78</h3>
+                <h3>{{ productos.length }}</h3>
                 <p>Productos activos</p>
               </div>
             </div>
             <div class="summary-card card-tables">
               <i class="fas fa-table card-icon"></i>
               <div class="card-info">
-                <h3>24</h3>
+                <h3>{{ mesas.length }}</h3>
                 <p>Mesas disponibles</p>
               </div>
             </div>
             <div class="summary-card card-orders">
               <i class="fas fa-clipboard-list card-icon"></i>
               <div class="card-info">
-                <h3>125</h3>
+                <h3>{{ pedidos.length }}</h3>
                 <p>Pedidos registrados</p>
               </div>
             </div>
             <div class="summary-card card-reservations">
               <i class="fas fa-calendar-check card-icon"></i>
               <div class="card-info">
-                <h3>30</h3>
+                <h3>{{ reservas.length }}</h3>
                 <p>Reservas activas</p>
               </div>
             </div>
           </div>
+
+          <!-- Router view -->
           <router-view />
         </section>
       </main>
@@ -97,12 +101,16 @@ export default {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     return {
       username: user.userName || "Empleado",
-      roles: user.roles || []
+      roles: user.roles || [],
+      productos: [],
+      pedidos: [],
+      mesas: [],
+      reservas: []
     };
   },
   computed: {
     activeRole() {
-      return localStorage.getItem("activeRole") || "ROLE_CUSTOMER";
+      return localStorage.getItem("activeRole") || "ROLE_EMPLOYEE";
     },
     isEmployee() {
       return this.activeRole === "ROLE_EMPLOYEE";
@@ -112,11 +120,24 @@ export default {
     cambiarRol() {
       localStorage.removeItem("activeRole");
       this.$router.push("/select-role");
+    },
+    async cargarDatos() {
+      // Aquí puedes reemplazar con llamadas reales a tu API
+      this.productos = [{ id: 1 }, { id: 2 }];
+      this.pedidos = [{ id: 1 }, { id: 2 }, { id: 3 }];
+      this.mesas = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
+      this.reservas = [{ id: 1 }];
     }
+  },
+  mounted() {
+    if (!this.isEmployee) {
+      this.$router.push("/select-role");
+      return;
+    }
+    this.cargarDatos();
   }
 };
 </script>
-
 
 <style scoped>
 .dashboard-container {
@@ -126,7 +147,7 @@ export default {
 }
 
 .dashboard-sidebar {
-  width: 180px;
+  width: 200px;
   background: #580e00;
   color: white;
   padding: 1rem;
@@ -207,8 +228,7 @@ export default {
 .card-products { background: #FF8C00; }
 .card-tables { background: #2ECC71; }
 .card-orders { background: #FF6B35; }
-.card-reservations { background: #3498DB; color: white; }
-.card-pos { background: #8e44ad; cursor: pointer; }
+.card-reservations { background: #3498DB; }
 
 .card-info h3 {
   margin: 0;
@@ -240,59 +260,58 @@ export default {
 .btn-role-switch:hover {
   background: linear-gradient(135deg, #7a2615, #a8321e);
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
 }
 
-/* POS modal */
-.pos-modal {
-  position: fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background: rgba(0,0,0,0.5);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index: 1000;
+/* Responsive */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    margin-right: 0;
+    border-radius: 0;
+    padding: 0.5rem;
+  }
+
+  .dashboard-sidebar ul {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .dashboard-sidebar li {
+    margin-bottom: 0;
+  }
+
+  .dashboard-main {
+    padding: 1rem;
+  }
+
+  .cards-container {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .card-info h3 {
+    font-size: 1.2rem;
+  }
+
+  .card-info p {
+    font-size: 0.8rem;
+  }
 }
 
-.pos-content {
-  background:white;
-  padding:2rem;
-  border-radius:12px;
-  width:400px;
-  max-width:90%;
-}
+@media (max-width: 480px) {
+  .cards-container {
+    grid-template-columns: 1fr;
+  }
 
-.pos-products {
-  display:flex;
-  flex-direction:column;
-  margin-bottom:1rem;
-}
-
-.pos-actions {
-  display:flex;
-  gap:1rem;
-  justify-content:flex-end;
-  align-items:center;
-}
-
-.btn-create-order {
-  background:#2ECC71;
-  border:none;
-  color:white;
-  padding:0.5rem 1rem;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-.btn-cancel {
-  background:#e74c3c;
-  border:none;
-  color:white;
-  padding:0.5rem 1rem;
-  border-radius:8px;
-  cursor:pointer;
+  .dashboard-sidebar a {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
 }
 </style>

@@ -78,7 +78,6 @@
                         <tr>
                             <th class="text-center">#</th>
                             <th>Cliente</th>
-                            <th>Empleado</th>
                             <th class="text-center">Mesa</th>
                             <th class="text-center">Fecha</th>
                             <th class="text-center">Estado</th>
@@ -90,14 +89,13 @@
                         <tr v-for="o in pedidos" :key="o.id" class="pedido-row">
                             <td class="text-center">{{ o.id }}</td>
                             <td>{{ o.customer?.name }}</td>
-                            <td>{{ o.employee?.name || "Sin asignar" }}</td>
                             <td class="text-center">Mesa {{ o.table?.number }}</td>
                             <td class="text-center">{{ formatDate(o.date) }}</td>
                             <td class="text-center">
                                 <span class="badge" :class="badgeClass(o.status)">{{ traducirEstado(o.status) }}</span>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-success fs-6">${{ o.total.toFixed(2) }}</span>
+                                <span class="badge bg-success fs-6">${{ (o.total || 0).toFixed(2) }}</span>
                             </td>
                             <td class="text-center">
                                 <div class="action-buttons">
@@ -129,7 +127,6 @@
                     <div class="modal-body">
                         <div v-if="pedidoSeleccionado">
                             <p><strong>Cliente:</strong> {{ pedidoSeleccionado.customer?.name }}</p>
-                            <p><strong>Empleado:</strong> {{ pedidoSeleccionado.employee?.name || "Sin asignar" }}</p>
                             <p><strong>Mesa:</strong> {{ pedidoSeleccionado.table?.number }}</p>
                             <hr />
                             <table class="table table-sm table-striped">
@@ -145,13 +142,13 @@
                                     <tr v-for="d in pedidoSeleccionado.orderDetails" :key="d.id">
                                         <td>{{ d.product.name }}</td>
                                         <td class="text-center">{{ d.quantity }}</td>
-                                        <td class="text-center">${{ d.product.price }}</td>
-                                        <td class="text-center">${{ d.subtotal }}</td>
+                                        <td class="text-center">${{ (d.product?.price || 0).toFixed(2) }}</td>
+                                        <td class="text-center">${{ (d.subtotal || 0).toFixed(2) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
                             <div class="text-end">
-                                <strong>Total: ${{ pedidoSeleccionado.total.toFixed(2) }}</strong>
+                                <strong>Total: ${{ (pedidoSeleccionado.total || 0).toFixed(2) }}</strong>
                             </div>
                         </div>
                     </div>
@@ -182,12 +179,6 @@
                                     {{ c.name }} ({{ c.email }})
                                 </li>
                             </ul>
-                        </div>
-
-                        <!-- Empleado (NO editable) -->
-                        <div class="mb-3">
-                            <label class="form-label">Empleado asignado</label>
-                            <input type="text" class="form-control" v-model="busquedaEmpleado" disabled />
                         </div>
 
                         <!-- Mesa (select) -->
@@ -228,7 +219,7 @@
                                     <tr v-for="(d, index) in pedidoSeleccionado.orderDetails" :key="d.id">
                                         <td>
                                             <select class="form-select" v-model="d.product.id"
-                                                @change="actualizarProducto(d)">
+                                                @change="actualizarProducto(d, 'editar')">
                                                 <option v-for="p in productosDisponibles" :key="p.id" :value="p.id">
                                                     {{ p.name }}
                                                 </option>
@@ -236,26 +227,28 @@
                                         </td>
                                         <td class="text-center">
                                             <input type="number" class="form-control form-control-sm text-center"
-                                                v-model.number="d.quantity" @input="recalcularSubtotal(d)" min="1" />
+                                                v-model.number="d.quantity" @input="recalcularSubtotal(d, 'editar')"
+                                                min="1" />
                                         </td>
-                                        <td class="text-center">${{ d.product.price.toFixed(2) }}</td>
-                                        <td class="text-center">${{ d.subtotal.toFixed(2) }}</td>
+                                        <td class="text-center">${{ (d.product?.price || 0).toFixed(2) }}</td>
+                                        <td class="text-center">${{ (d.subtotal || 0).toFixed(2) }}</td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-danger" @click="eliminarProducto(index)">
+                                            <button class="btn btn-sm btn-danger"
+                                                @click="eliminarProducto(index, 'editar')">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
-                            <button class="btn btn-sm btn-primary mt-2" @click="agregarProducto">
+                            <button class="btn btn-sm btn-primary mt-2" @click="agregarProducto('editar')">
                                 <i class="fas fa-plus me-1"></i> Agregar producto
                             </button>
                         </div>
 
                         <!-- Total -->
                         <div class="mb-3 text-end">
-                            <strong>Total: ${{ pedidoSeleccionado.total.toFixed(2) }}</strong>
+                            <strong>Total: ${{ (pedidoSeleccionado.total || 0).toFixed(2) }}</strong>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -312,10 +305,10 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="(d, index) in pedidoNuevo.orderDetails" :key="index">
+                                    <tr v-for="(d, index) in (pedidoNuevo?.orderDetails || [])" :key="index">
                                         <td>
                                             <select class="form-select" v-model="d.product.id"
-                                                @change="actualizarProductoNuevo(d)">
+                                                @change="actualizarProducto(d, 'nuevo')">
                                                 <option v-for="p in productosDisponibles" :key="p.id" :value="p.id">
                                                     {{ p.name }}
                                                 </option>
@@ -323,26 +316,28 @@
                                         </td>
                                         <td class="text-center">
                                             <input type="number" class="form-control form-control-sm text-center"
-                                                v-model.number="d.quantity" @input="recalcularSubtotalNuevo(d)" min="1" />
+                                                v-model.number="d.quantity" @input="recalcularSubtotal(d, 'nuevo')"
+                                                min="1" />
                                         </td>
-                                        <td class="text-center">${{ d.product.price.toFixed(2) }}</td>
-                                        <td class="text-center">${{ d.subtotal.toFixed(2) }}</td>
+                                        <td class="text-center">${{ (d.product?.price || 0).toFixed(2) }}</td>
+                                        <td class="text-center">${{ (d.subtotal || 0).toFixed(2) }}</td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-danger" @click="eliminarProductoNuevo(index)">
+                                            <button class="btn btn-sm btn-danger"
+                                                @click="eliminarProducto(index, 'nuevo')">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
-                            <button class="btn btn-sm btn-primary mt-2" @click="agregarProductoNuevo">
+                            <button class="btn btn-sm btn-primary mt-2" @click="agregarProducto('nuevo')">
                                 <i class="fas fa-plus me-1"></i> Agregar producto
                             </button>
                         </div>
 
                         <!-- Total -->
                         <div class="mb-3 text-end">
-                            <strong>Total: ${{ pedidoNuevo.total.toFixed(2) }}</strong>
+                            <strong>Total: ${{ (pedidoNuevo?.total || 0).toFixed(2) }}</strong>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -383,7 +378,9 @@ export default {
             mesasDisponibles: [],
             busquedaCliente: "",
             resultadosCliente: [],
-            busquedaEmpleado: "",
+            actualizandoPedidos: false,
+            timeoutBusqueda: null,
+            timeoutFiltro: null
         };
     },
     mounted() {
@@ -392,184 +389,261 @@ export default {
             this.modalEditar = new Modal(document.getElementById("modalEditarPedido"));
             this.modalNuevo = new Modal(document.getElementById("modalNuevoPedido"));
         });
-        this.obtenerPedidos();
-        this.cargarProductos();
-        this.cargarMesas();
+        this.inicializarDatos();
     },
     methods: {
-        async obtenerPedidos() {
+        async inicializarDatos() {
             this.cargando = true;
             try {
-                const pedidos = await getOrders();
-                this.pedidosOriginales = pedidos;
-                this.pedidos = [...pedidos];
-            } catch {
-                mostrarAlerta("Error al cargar los pedidos", "danger");
+                await Promise.all([
+                    this.obtenerPedidos(),
+                    this.cargarProductos(),
+                    this.cargarMesas()
+                ]);
+            } catch (error) {
+                console.error('Error inicializando datos:', error);
+                mostrarAlerta("Error al cargar los datos iniciales", "danger");
             } finally {
                 this.cargando = false;
             }
         },
+
+        async obtenerPedidos() {
+            try {
+                const pedidos = await getOrders();
+                this.pedidosOriginales = pedidos;
+                this.pedidos = [...pedidos];
+            } catch (error) {
+                console.error('Error obteniendo pedidos:', error);
+                throw error;
+            }
+        },
+
+        async actualizarListaPedidos() {
+            if (this.actualizandoPedidos) return;
+
+            this.actualizandoPedidos = true;
+            try {
+                await this.obtenerPedidos();
+                this.aplicarFiltros();
+            } catch (error) {
+                console.error('Error actualizando pedidos:', error);
+            } finally {
+                this.actualizandoPedidos = false;
+            }
+        },
+
         async cargarProductos() {
             try {
                 this.productosDisponibles = await getProducts();
-            } catch {
-                mostrarAlerta("Error al cargar productos", "danger");
+            } catch (error) {
+                console.error('Error cargando productos:', error);
+                throw error;
             }
         },
+
         async cargarMesas() {
             try {
                 this.mesasDisponibles = await getTables();
-            } catch {
-                mostrarAlerta("Error al cargar mesas", "danger");
+            } catch (error) {
+                console.error('Error cargando mesas:', error);
+                throw error;
             }
         },
-        verDetalle(pedido) {
-            this.pedidoSeleccionado = pedido;
+
+        async verDetalle(pedido) {
+            this.pedidoSeleccionado = { ...pedido };
+            await nextTick();
             this.modalDetalle.show();
         },
+
         async eliminarPedido(id) {
             try {
                 const confirmado = await confirmar("Eliminar pedido", "¿Deseas eliminar este pedido?");
                 if (confirmado) {
                     await deleteOrder(id);
-                    // ✅ Actualizamos listas sin recargar
                     this.pedidos = this.pedidos.filter(p => p.id !== id);
                     this.pedidosOriginales = this.pedidosOriginales.filter(p => p.id !== id);
                     mostrarAlerta("Pedido eliminado", "success");
+                    this.actualizarListaPedidos();
                 }
-            } catch {
+            } catch (error) {
+                console.error('Error eliminando pedido:', error);
                 mostrarAlerta("Error al eliminar el pedido", "danger");
             }
         },
-        editarPedido(pedido) {
+
+        async editarPedido(pedido) {
             this.pedidoSeleccionado = JSON.parse(JSON.stringify(pedido));
-            if (Array.isArray(this.pedidoSeleccionado.orderDetails)) {
-                this.pedidoSeleccionado.orderDetails.forEach(d => {
-                    d.subtotal = (d.subtotal !== undefined) ? d.subtotal : (d.quantity * (d.product?.price || 0));
-                });
-            } else {
+
+            if (!Array.isArray(this.pedidoSeleccionado.orderDetails)) {
                 this.pedidoSeleccionado.orderDetails = [];
             }
+
+            await this.recalcularTodosSubtotales();
             this.busquedaCliente = this.pedidoSeleccionado.customer?.name || "";
-            this.busquedaEmpleado = this.pedidoSeleccionado.employee?.name || "";
+
+            await nextTick();
             this.modalEditar.show();
         },
+
         async guardarCambios() {
+            if (!this.validarPedido(this.pedidoSeleccionado)) return;
+
             try {
-                if (!this.pedidoSeleccionado.customer?.id) {
-                    mostrarAlerta("Seleccione un cliente válido.", "warning");
-                    return;
-                }
-                if (!this.pedidoSeleccionado.orderDetails?.length) {
-                    mostrarAlerta("Agregue al menos un producto.", "warning");
-                    return;
-                }
                 this.recalcularTotal();
 
-                const user = JSON.parse(localStorage.getItem("user")) || null;
-                const employeePayload = user?.id ? { id: user.id } : null;
+                const payload = this.prepararPayload(this.pedidoSeleccionado);
+                const pedidoActualizado = await updateOrder(this.pedidoSeleccionado.id, payload);
 
-                const payload = {
-                    customer: { id: this.pedidoSeleccionado.customer.id },
-                    employee: employeePayload,
-                    table: { id: this.pedidoSeleccionado.table.id },
-                    status: this.pedidoSeleccionado.status,
-                    orderDetails: this.pedidoSeleccionado.orderDetails.map(d => ({
-                        product: { id: d.product.id },
-                        quantity: d.quantity
-                    }))
-                };
-
-                await updateOrder(this.pedidoSeleccionado.id, payload);
-
-                // ✅ Actualizamos en memoria
-                const index = this.pedidos.findIndex(p => p.id === this.pedidoSeleccionado.id);
-                if (index !== -1) {
-                    this.pedidos[index] = { ...this.pedidoSeleccionado };
-                    this.pedidosOriginales[index] = { ...this.pedidoSeleccionado };
-                }
+                this.actualizarPedidoEnLista(pedidoActualizado);
 
                 mostrarAlerta("Pedido actualizado correctamente", "success");
                 this.modalEditar.hide();
-            } catch {
+                this.actualizarListaPedidos();
+            } catch (error) {
+                console.error('Error guardando cambios:', error);
                 mostrarAlerta("Error al actualizar el pedido", "danger");
             }
         },
 
         aplicarFiltros() {
             this.pedidos = this.pedidosOriginales.filter(p => {
-                const coincideCliente = !this.filtro.trim() || (p.customer?.name || "").toLowerCase().includes(this.filtro.toLowerCase());
+                const coincideCliente = !this.filtro.trim() ||
+                    (p.customer?.name || "").toLowerCase().includes(this.filtro.toLowerCase());
                 const coincideEstado = this.filtroEstado === "0" || p.status === this.filtroEstado;
                 const coincideFecha = !this.filtroFecha || (p.date || "").startsWith(this.filtroFecha);
                 return coincideCliente && coincideEstado && coincideFecha;
             });
         },
-        filtrarBusqueda() { this.aplicarFiltros(); },
-        filtrarPorEstado() { this.aplicarFiltros(); },
-        filtrarPorFecha() { this.aplicarFiltros(); },
-        limpiarFiltros() {
+
+        async filtrarBusqueda() {
+            if (this.timeoutFiltro) clearTimeout(this.timeoutFiltro);
+            this.timeoutFiltro = setTimeout(() => this.aplicarFiltros(), 300);
+        },
+
+        async filtrarPorEstado() {
+            if (this.timeoutFiltro) clearTimeout(this.timeoutFiltro);
+            this.timeoutFiltro = setTimeout(() => this.aplicarFiltros(), 300);
+        },
+
+        async filtrarPorFecha() {
+            if (this.timeoutFiltro) clearTimeout(this.timeoutFiltro);
+            this.timeoutFiltro = setTimeout(() => this.aplicarFiltros(), 300);
+        },
+
+        async limpiarFiltros() {
             this.filtro = "";
             this.filtroEstado = "0";
             this.filtroFecha = "";
             this.pedidos = [...this.pedidosOriginales];
         },
 
-        formatDate(date) { return new Date(date).toLocaleString(); },
-        badgeClass(status) {
+        validarPedido(pedido) {
+            if (!pedido.customer?.id) {
+                mostrarAlerta("Seleccione un cliente válido.", "warning");
+                return false;
+            }
+            if (!pedido.orderDetails?.length) {
+                mostrarAlerta("Agregue al menos un producto.", "warning");
+                return false;
+            }
+            return true;
+        },
+
+        prepararPayload(pedido) {
             return {
-                "bg-warning": status === "PENDING",
-                "bg-primary": status === "IN_PROGRESS",
-                "bg-success": status === "COMPLETED",
-                "bg-danger": status === "CANCELLED",
+                customer: { id: pedido.customer.id },
+                table: { id: pedido.table.id },
+                status: pedido.status,
+                orderDetails: pedido.orderDetails.map(d => ({
+                    product: { id: d.product.id },
+                    quantity: d.quantity
+                }))
             };
         },
-        traducirEstado(status) {
-            switch (status) {
-                case "PENDING": return "Pendiente";
-                case "IN_PROGRESS": return "En proceso";
-                case "COMPLETED": return "Completado";
-                case "CANCELLED": return "Cancelado";
-                default: return status;
+
+        actualizarPedidoEnLista(pedidoActualizado) {
+            const index = this.pedidos.findIndex(p => p.id === pedidoActualizado.id);
+            if (index !== -1) {
+                this.pedidos[index] = { ...pedidoActualizado };
+                this.pedidosOriginales[index] = { ...pedidoActualizado };
             }
         },
 
-        agregarProducto() {
-            if (!this.productosDisponibles.length) return;
+        agregarProducto(contexto = 'editar') {
+            const pedido = contexto === 'nuevo' ? this.pedidoNuevo : this.pedidoSeleccionado;
+            if (!pedido || !this.productosDisponibles.length) return;
+
             const producto = this.productosDisponibles[0];
-            if (!this.pedidoSeleccionado.orderDetails) this.pedidoSeleccionado.orderDetails = [];
-            this.pedidoSeleccionado.orderDetails.push({
-                id: 0,
+            if (!pedido.orderDetails) pedido.orderDetails = [];
+
+            pedido.orderDetails.push({
+                id: Date.now(),
                 product: { ...producto },
                 quantity: 1,
-                subtotal: producto.price,
+                subtotal: (producto.price || 0) * 1,
+            });
+
+            this.recalcularTotalContexto(contexto);
+        },
+
+        async eliminarProducto(index, contexto = 'editar') {
+            const pedido = contexto === 'nuevo' ? this.pedidoNuevo : this.pedidoSeleccionado;
+            if (!pedido?.orderDetails) return;
+
+            pedido.orderDetails.splice(index, 1);
+            await this.recalcularTotalContexto(contexto);
+        },
+
+        async actualizarProducto(detalle, contexto = 'editar') {
+            const prod = this.productosDisponibles.find(p => p.id === detalle.product.id);
+            if (prod) {
+                detalle.product = { ...prod };
+                await this.recalcularSubtotal(detalle, contexto);
+            }
+        },
+
+        async recalcularSubtotal(detalle, contexto = 'editar') {
+            const precio = detalle.product?.price || 0;
+            const cantidad = detalle.quantity || 0;
+            detalle.subtotal = precio * cantidad;
+            await this.recalcularTotalContexto(contexto);
+        },
+
+        async recalcularTodosSubtotales() {
+            if (!this.pedidoSeleccionado?.orderDetails) return;
+
+            this.pedidoSeleccionado.orderDetails.forEach(detalle => {
+                const precio = detalle.product?.price || 0;
+                const cantidad = detalle.quantity || 0;
+                detalle.subtotal = precio * cantidad;
             });
             this.recalcularTotal();
         },
-        eliminarProducto(index) {
-            this.pedidoSeleccionado.orderDetails.splice(index, 1);
-            this.recalcularTotal();
-        },
-        actualizarProducto(detalle) {
-            const prod = this.productosDisponibles.find((p) => p.id === detalle.product.id);
-            if (prod) {
-                detalle.product = { ...prod };
-                this.recalcularSubtotal(detalle);
-            }
-        },
-        recalcularSubtotal(detalle) {
-            detalle.subtotal = detalle.quantity * detalle.product.price;
-            this.recalcularTotal();
-        },
+
         recalcularTotal() {
             if (!this.pedidoSeleccionado?.orderDetails) return;
+
             this.pedidoSeleccionado.total = this.pedidoSeleccionado.orderDetails.reduce(
                 (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
                 0
             );
         },
 
-        // === NUEVO PEDIDO ===
-        nuevoPedido() {
+        async recalcularTotalContexto(contexto = 'editar') {
+            const pedido = contexto === 'nuevo' ? this.pedidoNuevo : this.pedidoSeleccionado;
+            if (!pedido?.orderDetails) return;
+
+            await nextTick();
+
+            pedido.total = pedido.orderDetails.reduce(
+                (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
+                0
+            );
+        },
+
+        async nuevoPedido() {
             this.pedidoNuevo = {
                 customer: null,
                 table: { id: this.mesasDisponibles[0]?.id || null },
@@ -579,113 +653,94 @@ export default {
             };
             this.busquedaCliente = "";
             this.resultadosCliente = [];
+
+            await nextTick();
             this.modalNuevo.show();
         },
+
         async guardarNuevoPedido() {
+            if (!this.validarPedido(this.pedidoNuevo)) return;
+
             try {
-                if (!this.pedidoNuevo.customer?.id) {
-                    mostrarAlerta("Seleccione un cliente para el pedido.", "warning");
-                    return;
-                }
-                if (!this.pedidoNuevo.table?.id) {
-                    mostrarAlerta("Seleccione una mesa.", "warning");
-                    return;
-                }
-                if (!this.pedidoNuevo.orderDetails?.length) {
-                    mostrarAlerta("Agregue al menos un producto.", "warning");
-                    return;
-                }
+                await this.recalcularTotalContexto('nuevo');
 
-                this.recalcularTotalNuevo();
-
-                const user = JSON.parse(localStorage.getItem("user")) || null;
-                const employeePayload = user?.id ? { id: user.id } : null;
-
-                const payload = {
-                    customer: { id: this.pedidoNuevo.customer.id },
-                    employee: employeePayload,
-                    table: { id: this.pedidoNuevo.table.id },
-                    status: this.pedidoNuevo.status,
-                    orderDetails: this.pedidoNuevo.orderDetails.map(d => ({
-                        product: { id: d.product.id },
-                        quantity: d.quantity
-                    }))
-                };
-
+                const payload = this.prepararPayload(this.pedidoNuevo);
                 const nuevoPedido = await createOrder(payload);
 
-                // ✅ Insertar directamente en memoria
                 this.pedidos.push(nuevoPedido);
                 this.pedidosOriginales.push(nuevoPedido);
 
                 mostrarAlerta("Pedido creado correctamente", "success");
                 this.modalNuevo.hide();
-            } catch (err) {
-                console.error(err);
+                this.actualizarListaPedidos();
+
+                setTimeout(() => {
+                    this.pedidoNuevo = null;
+                }, 500);
+
+            } catch (error) {
+                console.error('Error creando pedido:', error);
                 mostrarAlerta("Error al crear el pedido", "danger");
             }
         },
+
         seleccionarClienteNuevo(cliente) {
             if (!this.pedidoNuevo) return;
             this.pedidoNuevo.customer = { id: cliente.id, name: cliente.name };
             this.busquedaCliente = cliente.name;
             this.resultadosCliente = [];
         },
-        agregarProductoNuevo() {
-            if (!this.productosDisponibles.length) return;
-            const producto = this.productosDisponibles[0];
-            this.pedidoNuevo.orderDetails.push({
-                product: { ...producto },
-                quantity: 1,
-                subtotal: producto.price,
-            });
-            this.recalcularTotalNuevo();
-        },
-        eliminarProductoNuevo(index) {
-            this.pedidoNuevo.orderDetails.splice(index, 1);
-            this.recalcularTotalNuevo();
-        },
-        actualizarProductoNuevo(detalle) {
-            const prod = this.productosDisponibles.find((p) => p.id === detalle.product.id);
-            if (prod) {
-                detalle.product = { ...prod };
-                this.recalcularSubtotalNuevo(detalle);
-            }
-        },
-        recalcularSubtotalNuevo(detalle) {
-            detalle.subtotal = detalle.quantity * detalle.product.price;
-            this.recalcularTotalNuevo();
-        },
-        recalcularTotalNuevo() {
-            if (!this.pedidoNuevo?.orderDetails) return;
-            this.pedidoNuevo.total = this.pedidoNuevo.orderDetails.reduce(
-                (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
-                0
-            );
-        },
 
-        // === BUSCAR CLIENTE ===
         async buscarClientes() {
+            if (this.timeoutBusqueda) clearTimeout(this.timeoutBusqueda);
+
             if (!this.busquedaCliente.trim() || this.busquedaCliente.length < 2) {
                 this.resultadosCliente = [];
                 return;
             }
-            try {
-                this.resultadosCliente = await searchUsers(this.busquedaCliente);
-            } catch {
-                mostrarAlerta("Error al buscar clientes", "danger");
-            }
+
+            this.timeoutBusqueda = setTimeout(async () => {
+                try {
+                    this.resultadosCliente = await searchUsers(this.busquedaCliente);
+                } catch (error) {
+                    console.error('Error buscando clientes:', error);
+                    mostrarAlerta("Error al buscar clientes", "danger");
+                }
+            }, 500);
         },
+
         seleccionarCliente(cliente) {
             if (!this.pedidoSeleccionado) return;
             this.pedidoSeleccionado.customer = { id: cliente.id, name: cliente.name };
             this.busquedaCliente = cliente.name;
             this.resultadosCliente = [];
         },
+
+        formatDate(date) {
+            return new Date(date).toLocaleString();
+        },
+
+        badgeClass(status) {
+            return {
+                "bg-warning": status === "PENDING",
+                "bg-primary": status === "IN_PROGRESS",
+                "bg-success": status === "COMPLETED",
+                "bg-danger": status === "CANCELLED",
+            };
+        },
+
+        traducirEstado(status) {
+            switch (status) {
+                case "PENDING": return "Pendiente";
+                case "IN_PROGRESS": return "En proceso";
+                case "COMPLETED": return "Completado";
+                case "CANCELLED": return "Cancelado";
+                default: return status;
+            }
+        },
     },
 };
 </script>
-
 
 <style>
 .pedidos-header {
@@ -858,4 +913,3 @@ export default {
     padding: 1.2rem 1.5rem;
 }
 </style>
-
