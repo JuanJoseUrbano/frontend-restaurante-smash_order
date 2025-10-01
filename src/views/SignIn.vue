@@ -139,7 +139,7 @@ export default {
   },
   data() {
     return {
-      urlApi: "http://localhost:8080/smash-order/api/",
+      urlApi: "http://localhost:8081/smash-order/api/",
       user: {
         id: "",
         name: "",

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/smash-order/api",
+  baseURL: "http://localhost:8081/smash-order/api",
   timeout: 10000,
 });
 
