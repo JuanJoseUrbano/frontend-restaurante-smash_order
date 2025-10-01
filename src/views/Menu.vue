@@ -7,11 +7,13 @@
 
   <div class="catalogo-container">
 
+    <!-- HEADER -->
     <div class="catalogo-header shadow-sm text-center">
       <h1 class="catalogo-title">Menú Disponible</h1>
       <p class="catalogo-subtitle">Explora nuestra variedad de productos</p>
     </div>
 
+    <!-- FILTROS -->
     <div class="catalogo-filtros card p-3 mb-4 shadow-sm">
       <div class="row g-3 align-items-center">
         <div class="col-md">
@@ -80,7 +82,7 @@
       </div>
     </div>
 
-    <!-- Carrito de compras flotante -->
+    <!-- CARRITO FLOTANTE -->
     <div class="carrito-flotante card shadow-sm" v-if="carrito.length > 0">
       <div class="card-body">
         <h5 class="mb-3"><i class="fas fa-shopping-cart me-2"></i> Tu Carrito</h5>
@@ -93,16 +95,25 @@
               <small class="text-muted">${{ item.price }} x {{ item.cantidad }}</small>
             </div>
             <div>
-              <button class="btn btn-sm btn-outline-secondary me-2"
-                      @click="cambiarCantidad(item, -1)">-</button>
-              <button class="btn btn-sm btn-outline-secondary me-2"
-                      @click="cambiarCantidad(item, 1)">+</button>
+              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, -1)">-</button>
+              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, 1)">+</button>
               <button class="btn btn-sm btn-outline-danger" @click="eliminarDelCarrito(item)">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
           </li>
         </ul>
+
+        <!-- Selección de mesa -->
+        <div class="mb-3">
+          <label class="form-label">Selecciona la mesa</label>
+          <select class="form-select" v-model="mesaSeleccionada">
+            <option value="">-- Selecciona una mesa --</option>
+            <option v-for="m in mesas" :key="m.id" :value="m.id">
+              Mesa {{ m.number }}
+            </option>
+          </select>
+        </div>
 
         <h5 class="text-end">Total: <span class="text-success">${{ totalCarrito }}</span></h5>
 
@@ -113,18 +124,23 @@
     </div>
   </div>
 </template>
+
 <script>
 import { mostrarAlerta } from "@/functions.js";
 import { getProducts, searchProducts, filterByCategory, filterByPrice } from "@/services/products";
 import { getCategories } from "@/services/categories";
+import { getTables } from "@/services/tables";
+import { createOrder } from "@/services/orders";
 
 export default {
   name: "CatalogoProductos",
   data() {
     return {
-      usuario: JSON.parse(localStorage.getItem("user")) || {}, // 🔹 Aquí guardamos al usuario completo
+      usuario: JSON.parse(localStorage.getItem("user")) || {}, // Usuario logueado
       productos: [],
       categorias: [],
+      mesas: [],
+      mesaSeleccionada: "",
       cargando: false,
       filtro: "",
       filtroCategoria: 0,
@@ -142,6 +158,7 @@ export default {
   mounted() {
     this.obtenerProductos();
     this.obtenerCategorias();
+    this.obtenerMesas();
   },
   methods: {
     async obtenerProductos() {
@@ -159,6 +176,13 @@ export default {
         this.categorias = await getCategories();
       } catch (error) {
         mostrarAlerta("Error al cargar las categorías", "danger");
+      }
+    },
+    async obtenerMesas() {
+      try {
+        this.mesas = await getTables();
+      } catch (error) {
+        mostrarAlerta("Error al cargar las mesas", "danger");
       }
     },
     async filtrarBusqueda() {
@@ -209,21 +233,41 @@ export default {
     eliminarDelCarrito(item) {
       this.carrito = this.carrito.filter((p) => p.id !== item.id);
     },
-    confirmarPedido() {
+    async confirmarPedido() {
       if (this.carrito.length === 0) return;
 
-      const listaProductos = this.carrito
-        .map(item => `${item.name} x${item.cantidad} - $${item.price * item.cantidad}`)
-        .join('\n');
+      if (!this.mesaSeleccionada) {
+        mostrarAlerta("Debes seleccionar una mesa para continuar", "warning");
+        return;
+      }
 
-      const total = this.totalCarrito;
+      try {
+        const order = {
+          customer: { id: this.usuario.id },
+          employee: { id: 1 },
+          table: { id: this.mesaSeleccionada },
+          status: "PENDING",
+          orderDetails: this.carrito.map(item => ({
+            product: { id: item.id },
+            quantity: item.cantidad,
+          }))
+        };
 
-      mostrarAlerta(
-        `Pedido confirmado con éxito 🎉\n\nProductos:\n${listaProductos}\n\nTotal: $${total}`,
-        "success"
-      );
+        await createOrder(order);
 
-      this.carrito = [];
+        const total = this.totalCarrito;
+
+        mostrarAlerta(
+          `Pedido confirmado con éxito 🎉\nTotal: $${total}`,
+          "success"
+        );
+
+        this.carrito = [];
+        this.mesaSeleccionada = "";
+      } catch (error) {
+        console.error(error);
+        mostrarAlerta("Error al confirmar un pedido", "danger");
+      }
     },
     cambiarRol() {
       localStorage.removeItem("activeRole");
