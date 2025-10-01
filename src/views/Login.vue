@@ -1,4 +1,5 @@
 <template>
+  <PublicHeader />
   <div class="login-page">
     <div class="login-box">
       <img class="logo" src="@/assets/logo_smash_order.png" alt="SmashOrder Logo" />
@@ -26,11 +27,13 @@
 </template>
 
 <script>
+import PublicHeader from "@/components/PublicHeader.vue";
 import { mostrarAlerta } from "@/functions";
 import { loginUser } from "@/services/users";
 
 export default {
   name: "LoginPage",
+  components: { PublicHeader },
   data() {
     return {
       usuario: "",
@@ -49,12 +52,22 @@ export default {
 
         await loginUser(payload);
 
-        // Guardamos sesión en localStorage
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("username", this.usuario);
 
+        let role = "Administrador"; // <-- por defecto admin
+        //let role = "Cliente";
+        localStorage.setItem("role", role);
+
         mostrarAlerta("Inicio de sesión exitoso", "success");
-        this.$router.push("/dashboard-products");
+
+        // Redirige según rol
+        if (role === "Administrador") {
+          this.$router.push("/dashboard");
+        } else if (role === "Cliente") {
+          this.$router.push("/menu");
+        }
+
       } catch (error) {
         if (error.response?.status === 401) {
           mostrarAlerta(
@@ -68,7 +81,6 @@ export default {
             "error",
             "Servidor no disponible"
           );
-
         }
         console.error("Error en login:", error);
       } finally {
@@ -79,10 +91,7 @@ export default {
 };
 </script>
 
-
-
 <style>
-
 .login-page {
   display: flex;
   justify-content: center;

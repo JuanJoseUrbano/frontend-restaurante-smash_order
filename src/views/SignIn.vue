@@ -1,4 +1,5 @@
 <template>
+  <PublicHeader/>
   <div class="register-container">
     <div class="register-card">
       <div class="register-header">
@@ -129,9 +130,13 @@
 <script>
 import axios from "axios";
 import { mostrarAlerta } from "@/functions";
+import PublicHeader from "@/components/PublicHeader.vue";
 
 export default {
   name: "RegisterPage",
+   components: {
+    PublicHeader
+  },
   data() {
     return {
       urlApi: "http://localhost:8080/smash-order/api/",

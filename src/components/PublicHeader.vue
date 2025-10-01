@@ -49,6 +49,7 @@ export default {
 /* Navbar general */
 .navbar-custom {
   background-color: #580e00;
+  border-top: 2px solid #7a2710;
   padding: 0.5rem 1rem;
 }
 
