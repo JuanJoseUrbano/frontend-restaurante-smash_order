@@ -1,26 +1,46 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo_smash_order.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+    <!-- Header -->
+    <PublicHeader />
+
+    <!-- Contenido principal -->
+    <main class="main-content">
+     <router-view />
+    </main>
+
+    <!-- Footer -->
+    <FooterComponent />
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import FooterComponent from './components/FooterComponent.vue';
+import PublicHeader from './components/PublicHeader.vue';
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    PublicHeader,
+    FooterComponent
   }
 }
 </script>
 
 <style>
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* El contenido crece para empujar el footer al fondo */
+.main-content {
+  flex: 1;
+  padding: 1rem 1rem; /* espacio para que no quede pegado */
 }
 </style>
