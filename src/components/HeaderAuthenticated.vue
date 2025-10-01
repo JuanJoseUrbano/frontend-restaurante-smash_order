@@ -2,15 +2,14 @@
   <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
       <!-- Logo y marca -->
-      <router-link to="/menu" class="navbar-brand d-flex align-items-center">
+      <router-link :to="dashboardRoute" class="navbar-brand d-flex align-items-center">
         <img class="logo-img" src="../assets/logo_smash_order.png" alt="Logo Smash Order" />
         <div class="brand-text ms-2">
           <span class="brand-main">SmashOrder</span>
-          <span class="brand-sub">Menú del Cliente</span>
+          <span class="brand-sub">{{ subtitle }}</span>
         </div>
       </router-link>
 
-      <!-- Botón hamburguesa para móviles -->
       <button
         class="navbar-toggler"
         type="button"
@@ -25,18 +24,18 @@
 
       <!-- Menú usuario -->
       <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
-        <ul class="navbar-nav align-items-lg-center ms-auto">
+        <ul class="navbar-nav align-items-center">
           <!-- Usuario -->
-          <li class="nav-item d-flex align-items-center me-lg-3 mb-2 mb-lg-0">
+          <li class="nav-item d-flex align-items-center me-3">
             <i class="fas fa-user-circle me-2" style="font-size: 1.5rem; color: white;"></i>
             <div class="text-white">
               <div class="username">{{ username }}</div>
-              <div class="role">{{ role }}</div>
+              <div class="role">{{ formattedRole }}</div>
             </div>
           </li>
 
-          <!-- Botones de acción -->
-          <li class="nav-item d-flex flex-column flex-lg-row gap-2">
+          <!-- Botones -->
+          <li class="nav-item d-flex gap-2">
             <router-link to="/perfil" class="btn btn-profile">
               <i class="fas fa-user me-1"></i> Perfil
             </router-link>
@@ -52,33 +51,68 @@
 
 <script>
 export default {
-  name: "CustomerHeader",
-  data() {
-    return {
-      username: localStorage.getItem("username") || "Cliente",
-      role: localStorage.getItem("role") || "Cliente",
-    };
+  name: "HeaderAuthenticated",
+  props: {
+    username: {
+      type: String,
+      default: "Usuario"
+    },
+    roles: {
+      type: Array,
+      default: () => []
+    },
+    activeRole: {
+      type: String,
+      default: "ROLE_CUSTOMER"
+    }
+  },
+  computed: {
+    formattedRole() {
+      switch (this.activeRole) {
+        case "ROLE_ADMIN": return "Administrador";
+        case "ROLE_EMPLOYEE": return "Empleado";
+        case "ROLE_CUSTOMER": return "Cliente";
+        default: return "Sin rol";
+      }
+    },
+    dashboardRoute() {
+      // Redirige al dashboard correspondiente según el rol activo
+      switch (this.activeRole) {
+        case "ROLE_ADMIN": return "/dashboard";
+        case "ROLE_EMPLOYEE": return "/employee";
+        case "ROLE_CUSTOMER": return "/menu";
+        default: return "/";
+      }
+    },
+    subtitle() {
+      switch (this.activeRole) {
+        case "ROLE_ADMIN": 
+        case "ROLE_EMPLOYEE": return "Panel de Control";
+        case "ROLE_CUSTOMER": return "Menú del Cliente";
+        default: return "";
+      }
+    }
   },
   methods: {
     logout() {
       if (confirm("¿Deseas cerrar sesión?")) {
-        localStorage.removeItem("isAuthenticated");
-        localStorage.removeItem("username");
-        localStorage.removeItem("role");
+        localStorage.clear();
         this.$router.push("/login");
       }
-    },
-  },
+    }
+  }
 };
 </script>
 
 <style scoped>
 .navbar-custom {
-  background-color: #580e00; /* Igual que el footer */
+  background-color: #580e00;
+  /* Igual que el footer */
   color: #ffffff;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Inverso del footer (sombra hacia abajo) */
   padding: 0.5rem 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); /* sombra hacia abajo */
 }
 
 
@@ -116,7 +150,6 @@ export default {
   opacity: 0.9;
 }
 
-/* Botones con estilo del header admin */
 .btn-profile {
   background: white;
   color: #580e00;
@@ -143,4 +176,3 @@ export default {
   background: #c0392b;
 }
 </style>
-

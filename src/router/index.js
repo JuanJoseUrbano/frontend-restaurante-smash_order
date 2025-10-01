@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
-import DashboardLayout from "@/views/DashboardLayout.vue";
+import DashboardAdmin from "@/views/DashboardAdmin.vue";
+import DashboardEmployee from "@/views/DashboardEmployee.vue";
+import DashboardCustomer from "@/views/DashboardCustomer.vue";
 import HomeView from "@/views/HomeView.vue";
 import AboutView from "@/views/AboutView.vue";
 import Login from "@/views/Login.vue";
@@ -8,7 +10,9 @@ import Users from "@/views/Users.vue";
 import Products from "@/views/Products.vue";
 import Categories from "@/views/Categories.vue";
 import Tables from "@/views/Tables.vue";
-import CustomerMenu from "@/views/CustomerMenu.vue";
+import Orders from "@/views/Orders.vue";
+import SelectRolePage from "@/views/SelectRolePage.vue";
+import Menu from "@/views/Menu.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -17,19 +21,44 @@ const routes = [
   { path: "/login", component: Login },
   { path: "/signin", component: SignIn },
 
+  { path: "/select-role", component: SelectRolePage },
+
+  // Dashboard Admin
   {
-    path: "/dashboard",
-    component: DashboardLayout,
-    meta: { requiresAuth: true }, // <-- agregado
+    path: "/dashboard-admin",
+    component: DashboardAdmin,
+    meta: { requiresAuth: true, role: "ROLE_ADMIN" },
     children: [
       { path: "users", component: Users },
       { path: "products", component: Products },
       { path: "categories", component: Categories },
       { path: "tables", component: Tables },
+      { path: "orders", component: Orders },
     ],
   },
 
-  { path: "/menu", component: CustomerMenu },
+  // Dashboard Employee
+  {
+    path: "/dashboard-employee",
+    component: DashboardEmployee,
+    meta: { requiresAuth: true, role: "ROLE_EMPLOYEE" },
+    children: [
+      { path: "products", component: Products },
+      { path: "tables", component: Tables },
+      { path: "orders", component: Orders },
+    ],
+  },
+
+  {
+    path: "/dashboard-customer",
+    component: DashboardCustomer,
+    meta: { requiresAuth: true, role: "ROLE_CUSTOMER" },
+    children: [
+      { path: "menu", component: Menu },         
+    ],
+  },
+
+  // Ruta catch-all
   { path: "/:catchAll(.*)", redirect: "/home" },
 ];
 
@@ -38,21 +67,26 @@ const router = createRouter({
   routes,
 });
 
-// Guard global para rutas que requieren autenticación
+// Guard global
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem("isAuthenticated");
-  const role = localStorage.getItem("role");
+  const activeRole = localStorage.getItem("activeRole");
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     next("/login");
-  } else if (to.path.startsWith("/dashboard") && role !== "Administrador") {
-    next("/menu");
-  } else if (to.path === "/menu" && role !== "Cliente") {
-    next("/dashboard");
+  } else if (to.meta.requiresAuth) {
+    if (to.meta.role && activeRole !== to.meta.role) {
+      // Si el rol no coincide, redirige según rol
+      if (activeRole === "ROLE_ADMIN") next("/dashboard-admin");
+      else if (activeRole === "ROLE_EMPLOYEE") next("/dashboard-employee");
+      else if (activeRole === "ROLE_CUSTOMER") next("/dashboard-customer");
+      else next("/login");
+    } else {
+      next();
+    }
   } else {
     next();
   }
 });
-
 
 export default router;
