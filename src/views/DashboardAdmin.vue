@@ -1,11 +1,7 @@
 <template>
   <div>
     <!-- Header recibe el rol activo -->
-    <HeaderAuthenticatedAdmin 
-      :username="username" 
-      :roles="roles" 
-      :active-role="activeRole"
-    />
+    <HeaderAuthenticatedAdmin :username="username" :roles="roles" :active-role="activeRole" />
 
     <div v-if="isAdminOrEmployee" class="dashboard-container">
       <aside class="dashboard-sidebar">
@@ -36,6 +32,12 @@
                 <i class="fas fa-table me-2"></i> Mesas
               </router-link>
             </li>
+            <li>
+              <router-link to="/dashboard-admin/payments">
+                <i class="fas fa-credit-card me-2"></i> Pagos
+              </router-link>
+            </li>
+
           </ul>
         </nav>
       </aside>
@@ -123,6 +125,7 @@ export default {
   }
 };
 </script>
+
 
 <style scoped>
 .dashboard-container {

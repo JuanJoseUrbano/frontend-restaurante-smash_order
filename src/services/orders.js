@@ -10,6 +10,11 @@ export async function getOrders() {
   return response.data;
 }
 
+export async function getOrdersWithoutInvoice() {
+  const response = await api.get("orders/without-invoice");
+  return response.data;
+}
+
 export async function getOrderById(id) {
   const response = await api.get(`/orders/${id}`);
   return response.data;
