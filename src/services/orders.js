@@ -52,3 +52,14 @@ export async function getOrdersBetweenDates(start, end) {
   });
   return response.data;
 }
+
+export async function countAllOrders() {
+  const response = await api.get("/orders/count");
+  return response.data;
+}
+
+export async function countOrdersByCustomer(customerId) {
+  const response = await api.get(`/orders/customer/${customerId}/count`);
+  return response.data;
+}
+

@@ -1,9 +1,9 @@
 <template>
   <HeaderAuthenticated 
-      :username="username" 
-      :roles="roles" 
-      :active-role="activeRole" 
-    />
+    :username="username" 
+    :roles="roles" 
+    :active-role="activeRole" 
+  />
   <div>
     <div v-if="isEmployee" class="dashboard-container">
       <!-- Sidebar -->
@@ -46,39 +46,37 @@
         </header>
 
         <section class="dashboard-main">
-          <!-- Cards resumen -->
           <div class="cards-container">
             <div class="summary-card card-products">
               <i class="fas fa-box-open card-icon"></i>
               <div class="card-info">
-                <h3>{{ productos.length }}</h3>
+                <h3>{{ productosCount }}</h3>
                 <p>Productos activos</p>
               </div>
             </div>
             <div class="summary-card card-tables">
               <i class="fas fa-table card-icon"></i>
               <div class="card-info">
-                <h3>{{ mesas.length }}</h3>
+                <h3>{{ mesasCount }}</h3>
                 <p>Mesas disponibles</p>
               </div>
             </div>
             <div class="summary-card card-orders">
               <i class="fas fa-clipboard-list card-icon"></i>
               <div class="card-info">
-                <h3>{{ pedidos.length }}</h3>
+                <h3>{{ pedidosCount }}</h3>
                 <p>Pedidos registrados</p>
               </div>
             </div>
             <div class="summary-card card-reservations">
               <i class="fas fa-calendar-check card-icon"></i>
               <div class="card-info">
-                <h3>{{ reservas.length }}</h3>
+                <h3>{{ reservasCount }}</h3>
                 <p>Reservas activas</p>
               </div>
             </div>
           </div>
 
-          <!-- Router view -->
           <router-view />
         </section>
       </main>
@@ -93,6 +91,10 @@
 
 <script>
 import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
+import { countAllOrders } from "@/services/orders";
+import { countAllProducts } from "@/services/products";
+import { countAvailableTables } from "@/services/tables";
+import { countActiveReservationsByCustome } from "@/services/reservation";
 
 export default {
   name: "EmployeeDashboardLayout",
@@ -102,10 +104,12 @@ export default {
     return {
       username: user.userName || "Empleado",
       roles: user.roles || [],
-      productos: [],
-      pedidos: [],
-      mesas: [],
-      reservas: []
+      productosCount: 0,
+      pedidosCount: 0,
+      mesasCount: 0,
+      reservasCount: 0,
+      intervalId: null,
+      customerId: user.id || null  // 🔹 id del cliente para reservas
     };
   },
   computed: {
@@ -121,23 +125,58 @@ export default {
       localStorage.removeItem("activeRole");
       this.$router.push("/select-role");
     },
+
+    async cargarPedidosCount() {
+      try { this.pedidosCount = await countAllOrders(); } 
+      catch (error) { console.error("Error al cargar pedidos:", error); }
+    },
+
+    async cargarProductosCount() {
+      try { this.productosCount = await countAllProducts(); } 
+      catch (error) { console.error("Error al cargar productos:", error); }
+    },
+
+    async cargarMesasCount() {
+      try { this.mesasCount = await countAvailableTables(); }
+      catch (error) { console.error("Error al cargar mesas:", error); }
+    },
+
+    async cargarReservasCount() {
+      try { 
+        if (this.customerId) {
+          this.reservasCount = await countActiveReservationsByCustome(this.customerId);
+        } else {
+          this.reservasCount = 0;
+        }
+      } catch (error) { 
+        console.error("Error al cargar reservas:", error); 
+      }
+    },
+
     async cargarDatos() {
-      // Aquí puedes reemplazar con llamadas reales a tu API
-      this.productos = [{ id: 1 }, { id: 2 }];
-      this.pedidos = [{ id: 1 }, { id: 2 }, { id: 3 }];
-      this.mesas = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
-      this.reservas = [{ id: 1 }];
+      await Promise.all([
+        this.cargarProductosCount(),
+        this.cargarPedidosCount(),
+        this.cargarMesasCount(),
+        this.cargarReservasCount()
+      ]);
+    },
+
+    iniciarAutoRefresh() {
+      this.intervalId = setInterval(this.cargarDatos, 5000);
     }
   },
   mounted() {
-    if (!this.isEmployee) {
-      this.$router.push("/select-role");
-      return;
-    }
+    if (!this.isEmployee) { this.$router.push("/select-role"); return; }
     this.cargarDatos();
+    this.iniciarAutoRefresh();
+  },
+  beforeUnmount() {
+    if (this.intervalId) clearInterval(this.intervalId);
   }
 };
 </script>
+
 
 <style scoped>
 .dashboard-container {
@@ -217,7 +256,7 @@ export default {
 
 .summary-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 .card-icon {
@@ -225,10 +264,21 @@ export default {
   margin-right: 1rem;
 }
 
-.card-products { background: #FF8C00; }
-.card-tables { background: #2ECC71; }
-.card-orders { background: #FF6B35; }
-.card-reservations { background: #3498DB; }
+.card-products {
+  background: #FF8C00;
+}
+
+.card-tables {
+  background: #2ECC71;
+}
+
+.card-orders {
+  background: #FF6B35;
+}
+
+.card-reservations {
+  background: #3498DB;
+}
 
 .card-info h3 {
   margin: 0;

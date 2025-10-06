@@ -26,3 +26,8 @@ export async function updateCategory(categoria) {
 export async function deleteCategory(id) {
   return await api.delete(`/categories/${id}`);
 }
+
+export async function countAllCategories() {
+  const response = await api.get("/categories/count");
+  return response.data;
+}
