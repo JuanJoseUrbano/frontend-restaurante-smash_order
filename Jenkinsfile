@@ -58,7 +58,7 @@ pipeline {
                 def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                 def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
                 sh "docker rmi ${fullImageName}:${shortCommit} || true"
-                sh "docker rmi ${fullImageName}:latest" || true"
+                sh "docker rmi ${fullImageName}:latest || true"
             }
         }
     }
