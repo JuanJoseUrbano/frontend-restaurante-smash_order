@@ -8,7 +8,7 @@ pipeline {
         REGISTRY = 'ghcr.io'
         IMAGE_NAME = 'your-github-username-or-org/frontend-restaurante-smash_order'
         // Este es el ID de las credenciales que debes configurar en Jenkins para acceder al registro de contenedores.
-        CREDENTIAL_ID = 'ghcr-credentials'
+    CREDENTIAL_ID = 'github-credentials'
     }
 
     stages {
