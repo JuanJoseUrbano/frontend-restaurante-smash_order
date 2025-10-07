@@ -16,6 +16,7 @@ import Menu from "@/views/Menu.vue";
 import CustomerTables from "@/views/CustomerTables.vue";
 import Reservation from "@/views/Reservation.vue";
 import Payments from "@/views/Invoices.vue";
+import OrderHistory from "@/views/OrderHistory.vue"; // ✅ Nueva vista
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -38,7 +39,7 @@ const routes = [
       { path: "tables", component: Tables },
       { path: "orders", component: Orders },
       { path: "reservations", component: Reservation },
-      { path: "payments", component: Payments }
+      { path: "payments", component: Payments },
     ],
   },
 
@@ -52,21 +53,22 @@ const routes = [
       { path: "tables", component: Tables },
       { path: "orders", component: Orders },
       { path: "reservations", component: Reservation },
-      { path: "payments", component: Payments }
+      { path: "payments", component: Payments },
     ],
   },
 
+  // Dashboard Customer
   {
     path: "/dashboard-customer",
     component: DashboardCustomer,
     meta: { requiresAuth: true, role: "ROLE_CUSTOMER" },
     children: [
       { path: "menu", component: Menu },
-      { path: "tables", component: CustomerTables }
+      { path: "tables", component: CustomerTables },
+      { path: "history-orders", component: OrderHistory },
     ],
   },
 
-  // Ruta catch-all
   { path: "/:catchAll(.*)", redirect: "/home" },
 ];
 
@@ -75,7 +77,6 @@ const router = createRouter({
   routes,
 });
 
-// Guard global
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem("isAuthenticated");
   const activeRole = localStorage.getItem("activeRole");
@@ -84,7 +85,6 @@ router.beforeEach((to, from, next) => {
     next("/login");
   } else if (to.meta.requiresAuth) {
     if (to.meta.role && activeRole !== to.meta.role) {
-      // Si el rol no coincide, redirige según rol
       if (activeRole === "ROLE_ADMIN") next("/dashboard-admin");
       else if (activeRole === "ROLE_EMPLOYEE") next("/dashboard-employee");
       else if (activeRole === "ROLE_CUSTOMER") next("/dashboard-customer");
