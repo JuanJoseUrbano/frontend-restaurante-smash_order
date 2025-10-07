@@ -14,11 +14,16 @@ pipeline {
             }
         }
 
-        // 👇 Nueva etapa para compilar el frontend
         stage('Install & Build') {
+            agent {
+                docker {
+                    image 'node:22-alpine'  // 🚀 Mismo Node que usas localmente
+                    args '-v $PWD:/app -w /app'
+                }
+            }
             steps {
                 script {
-                    sh 'npm install'
+                    sh 'npm ci'             // ✅ Recomendado en pipelines (más rápido y limpio)
                     sh 'npm run build'
                 }
             }
@@ -29,7 +34,7 @@ pipeline {
                 script {
                     def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
-                    
+
                     def dockerImage = docker.build("${fullImageName}:${shortCommit}", '.')
                     dockerImage.tag("${fullImageName}:latest")
                 }
@@ -41,7 +46,7 @@ pipeline {
                 script {
                     def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
-                    
+
                     docker.withRegistry("https://${env.REGISTRY}", env.CREDENTIAL_ID) {
                         docker.image("${fullImageName}:${shortCommit}").push()
                         docker.image("${fullImageName}:latest").push()
