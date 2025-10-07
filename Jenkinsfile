@@ -31,8 +31,9 @@ pipeline {
                     // Construye la imagen Docker desde el Dockerfile
                     def dockerImage = docker.build("${fullImageName}:${shortCommit}", '.')
                     
-                    // Etiqueta la imagen también como 'latest'
-                    dockerImage.tag("${fullImageName}:latest")
+                    // Etiqueta la imagen también como 'latest' usando un tag explícito para evitar duplicados
+                    // El wrapper dockerImage.tag a veces genera nombres inesperados; usamos sh docker tag
+                    sh "docker tag ${fullImageName}:${shortCommit} ${fullImageName}:latest"
                 }
             }
         }
@@ -59,9 +60,10 @@ pipeline {
     post {
         always {
             // Opcional: limpia la imagen de Docker del agente de Jenkins para ahorrar espacio
-            script {
+                script {
                 def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
+                def normalizedImageName = env.IMAGE_NAME.replaceAll('^ghcr.io/', '')
+                def fullImageName = "${env.REGISTRY}/${normalizedImageName}"
                 sh "docker rmi ${fullImageName}:${shortCommit} || true"
                 sh "docker rmi ${fullImageName}:latest || true"
             }
