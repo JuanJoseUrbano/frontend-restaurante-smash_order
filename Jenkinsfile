@@ -34,12 +34,12 @@ pipeline {
                 script {
                     def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
-
-                    def dockerImage = docker.build("${fullImageName}:${shortCommit}", '.')
-                    dockerImage.tag("${fullImageName}:latest")
-                }
-            }
+            
+                docker.build("${fullImageName}:${shortCommit}", '.')
+                sh "docker tag ${fullImageName}:${shortCommit} ${fullImageName}:latest"
         }
+    }
+}
 
         stage('Push Image') {
             steps {
