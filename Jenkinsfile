@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     environment {
-        // IMPORTANTE: Cambia 'your-github-username-or-org' por tu nombre de usuario u organización de GitHub.
-        // IMAGE_NAME debe contener solo el nombre de repositorio en formato 'usuario-o-org/repo',
-        // sin el prefijo del registry (p. ej. 'ghcr.io'). El pipeline añadirá el registry automáticamente.
+        // IMPORTANTE: Cambiado a tu usuario real de GitHub
         REGISTRY = 'ghcr.io'
-        IMAGE_NAME = 'your-github-username-or-org/frontend-restaurante-smash_order'
-        // Este es el ID de las credenciales que debes configurar en Jenkins para acceder al registro de contenedores.
-    CREDENTIAL_ID = 'github-credentials'
+        IMAGE_NAME = 'juanjoseurbano/frontend-restaurante-smash_order'
+        // Cambia esto si creaste una credencial nueva para el frontend
+        CREDENTIAL_ID = 'github-credentials'
+        // Si creaste una credencial específica para frontend, usa:
+        // CREDENTIAL_ID = 'github-credentials-frontend'
     }
 
     stages {
@@ -57,10 +57,11 @@ pipeline {
             }
         }
     }
+    
     post {
         always {
             // Opcional: limpia la imagen de Docker del agente de Jenkins para ahorrar espacio
-                script {
+            script {
                 def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                 def normalizedImageName = env.IMAGE_NAME.replaceAll('^ghcr.io/', '')
                 def fullImageName = "${env.REGISTRY}/${normalizedImageName}"
