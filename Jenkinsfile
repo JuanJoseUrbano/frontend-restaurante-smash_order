@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         REGISTRY = 'ghcr.io'
-        IMAGE_NAME = 'your-github-username-or-org/frontend-restaurante-smash_order'
+        IMAGE_NAME = 'your-github-JuanJoseUrbano-or-org/frontend-restaurante-smash_order'
         CREDENTIAL_ID = 'ghcr-credentials'
     }
 
