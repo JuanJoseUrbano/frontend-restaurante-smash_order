@@ -18,6 +18,7 @@ import CustomerTables from "@/views/CustomerTables.vue";
 import Reservation from "@/views/Reservation.vue";
 import Payments from "@/views/Invoices.vue";
 import ReservationHistory from "@/views/ReservationHistory.vue";
+import Notifications from "@/views/Notifications.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -62,7 +63,9 @@ const routes = [
     children: [
       { path: "menu", component: Menu },
       { path: "tables", component: CustomerTables },
-      { path: "reservations", component: ReservationHistory}
+      { path: "reservations", component: ReservationHistory},
+      { path: "notifications", component: Notifications},
+      
     ],
   },
 
