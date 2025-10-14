@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from "vue-router";
-
 import DashboardAdmin from "@/views/DashboardAdmin.vue";
 import DashboardEmployee from "@/views/DashboardEmployee.vue";
 import DashboardCustomer from "@/views/DashboardCustomer.vue";
@@ -19,6 +18,7 @@ import Reservation from "@/views/Reservation.vue";
 import Payments from "@/views/Invoices.vue";
 import ReservationHistory from "@/views/ReservationHistory.vue";
 import Notifications from "@/views/Notifications.vue";
+import OrderHistory from "@/views/OrderHistory.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -26,8 +26,10 @@ const routes = [
   { path: "/about", component: AboutView },
   { path: "/login", component: Login },
   { path: "/signin", component: SignIn },
+
   { path: "/select-role", component: SelectRolePage },
 
+  // Dashboard Admin
   {
     path: "/dashboard-admin",
     component: DashboardAdmin,
@@ -43,6 +45,7 @@ const routes = [
     ],
   },
 
+  // Dashboard Employee
   {
     path: "/dashboard-employee",
     component: DashboardEmployee,
@@ -56,6 +59,7 @@ const routes = [
     ],
   },
 
+  // Dashboard Customer
   {
     path: "/dashboard-customer",
     component: DashboardCustomer,
@@ -65,47 +69,36 @@ const routes = [
       { path: "tables", component: CustomerTables },
       { path: "reservations", component: ReservationHistory},
       { path: "notifications", component: Notifications},
-      
+      { path: "history-orders", component: OrderHistory}
     ],
   },
 
-  // Ruta por defecto
   { path: "/:catchAll(.*)", redirect: "/home" },
 ];
 
-// ✅ Crear instancia del router
 const router = createRouter({
   history: createWebHistory(),
   routes,
 });
 
-// ✅ Middleware de autenticación y roles
 router.beforeEach((to, from, next) => {
-  const publicPages = ["/login", "/signin", "/home", "/about"];
-  const authRequired = to.meta.requiresAuth;
   const isAuthenticated = localStorage.getItem("isAuthenticated");
   const activeRole = localStorage.getItem("activeRole");
 
-  // 🔓 Si la ruta es pública, no se aplica control
-  if (publicPages.includes(to.path)) {
-    return next();
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next("/login");
+  } else if (to.meta.requiresAuth) {
+    if (to.meta.role && activeRole !== to.meta.role) {
+      if (activeRole === "ROLE_ADMIN") next("/dashboard-admin");
+      else if (activeRole === "ROLE_EMPLOYEE") next("/dashboard-employee");
+      else if (activeRole === "ROLE_CUSTOMER") next("/dashboard-customer");
+      else next("/login");
+    } else {
+      next();
+    }
+  } else {
+    next();
   }
-
-  // 🚫 Si requiere autenticación y no hay sesión activa
-  if (authRequired && !isAuthenticated) {
-    return next("/login");
-  }
-
-  // 🧭 Si requiere rol específico
-  if (authRequired && to.meta.role && activeRole !== to.meta.role) {
-    if (activeRole === "ROLE_ADMIN") return next("/dashboard-admin");
-    if (activeRole === "ROLE_EMPLOYEE") return next("/dashboard-employee");
-    if (activeRole === "ROLE_CUSTOMER") return next("/dashboard-customer");
-    return next("/login");
-  }
-
-  // ✅ Continuar navegación
-  next();
 });
 
 export default router;
