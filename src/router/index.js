@@ -17,6 +17,7 @@ import Menu from "@/views/Menu.vue";
 import CustomerTables from "@/views/CustomerTables.vue";
 import Reservation from "@/views/Reservation.vue";
 import Payments from "@/views/Invoices.vue";
+import OrderHistory from "@/views/OrderHistory.vue";
 import ReservationHistory from "@/views/ReservationHistory.vue";
 
 const routes = [
@@ -62,6 +63,7 @@ const routes = [
     children: [
       { path: "menu", component: Menu },
       { path: "tables", component: CustomerTables },
+      { path: "history-orders", component: OrderHistory },
       { path: "reservations", component: ReservationHistory}
     ],
   },
