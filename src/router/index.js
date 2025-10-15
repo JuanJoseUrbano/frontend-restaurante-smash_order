@@ -19,6 +19,7 @@ import Reservation from "@/views/Reservation.vue";
 import Payments from "@/views/Invoices.vue";
 import OrderHistory from "@/views/OrderHistory.vue";
 import ReservationHistory from "@/views/ReservationHistory.vue";
+import Notifications from "@/views/Notifications.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -64,7 +65,8 @@ const routes = [
       { path: "menu", component: Menu },
       { path: "tables", component: CustomerTables },
       { path: "history-orders", component: OrderHistory },
-      { path: "reservations", component: ReservationHistory}
+      { path: "reservations", component: ReservationHistory},
+      { path: "notifications", component: Notifications}
     ],
   },
 
