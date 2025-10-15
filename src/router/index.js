@@ -67,9 +67,15 @@ const routes = [
     children: [
       { path: "menu", component: Menu },
       { path: "tables", component: CustomerTables },
+<<<<<<< HEAD
       { path: "reservations", component: ReservationHistory},
       { path: "notifications", component: Notifications},
       { path: "history-orders", component: OrderHistory}
+=======
+      { path: "history-orders", component: OrderHistory },
+      { path: "reservations", component: ReservationHistory},
+      { path: "notifications", component: Notifications}
+>>>>>>> dev/HU-209
     ],
   },
 
