@@ -19,6 +19,7 @@ import Payments from "@/views/Invoices.vue";
 import ReservationHistory from "@/views/ReservationHistory.vue";
 import Notifications from "@/views/Notifications.vue";
 import OrderHistory from "@/views/OrderHistory.vue";
+import UserProfile from "@/views/UserProfile.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -42,6 +43,7 @@ const routes = [
       { path: "orders", component: Orders },
       { path: "reservations", component: Reservation },
       { path: "payments", component: Payments },
+      { path: "profile", component: UserProfile}
     ],
   },
 
@@ -56,6 +58,7 @@ const routes = [
       { path: "orders", component: Orders },
       { path: "reservations", component: Reservation },
       { path: "payments", component: Payments },
+      { path: "profile", component: UserProfile}
     ],
   },
 
@@ -67,15 +70,10 @@ const routes = [
     children: [
       { path: "menu", component: Menu },
       { path: "tables", component: CustomerTables },
-<<<<<<< HEAD
-      { path: "reservations", component: ReservationHistory},
-      { path: "notifications", component: Notifications},
-      { path: "history-orders", component: OrderHistory}
-=======
       { path: "history-orders", component: OrderHistory },
       { path: "reservations", component: ReservationHistory},
-      { path: "notifications", component: Notifications}
->>>>>>> dev/HU-209
+      { path: "notifications", component: Notifications},
+      { path: "profile", component: UserProfile}
     ],
   },
 
