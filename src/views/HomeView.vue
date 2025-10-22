@@ -17,7 +17,7 @@
           Sitio web de comidas rápidas, principalmente hamburguesas, con un estilo moderno, llamativo y
           apetitoso, resaltando frescura y rapidez en el servicio.
         </p>
-        <router-link to="/menu" class="btn-order mt-3">Pedir ahora</router-link>
+        <router-link to="/catalogo" class="btn-order mt-3">Pedir ahora</router-link>
       </div>
     </div>
   </main>
