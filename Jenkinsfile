@@ -98,6 +98,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    sh "git config --global --add safe.directory /var/jenkins_home/workspace/frontend-pipeline_main"
                     def currentBranch = env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '')
                     def branchTag = currentBranch.replaceAll('/', '-')
                     def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
