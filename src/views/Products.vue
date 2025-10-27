@@ -14,9 +14,9 @@
           <button class="btn btn-guardar btn-sm d-flex align-items-center" @click="modalAgregar.show()">
             <i class="fas fa-plus-circle me-2"></i> Nuevo Producto
           </button>
-
         </div>
-        <!-- Búsqueda (input más largo) -->
+
+        <!-- Búsqueda -->
         <div class="search-group">
           <input type="text" class="search-input" v-model="filtro" placeholder="Buscar por nombre..." />
           <button @click="filtrarBusqueda" class="btn-buscar">
@@ -40,7 +40,6 @@
             <button @click="filtrarPorPrecio" class="btn btn-success btn-precio">Filtrar</button>
           </div>
         </div>
-
 
         <!-- Limpiar -->
         <div class="col-md-auto">
@@ -76,6 +75,7 @@
           <thead class="table-light">
             <tr>
               <th class="text-center">#</th>
+              <th>Imagen</th>
               <th>Nombre</th>
               <th>Descripción</th>
               <th class="text-center">Precio</th>
@@ -86,6 +86,10 @@
           <tbody>
             <tr v-for="p in productos" :key="p.id" class="producto-row">
               <td class="text-center">{{ p.id }}</td>
+              <td class="text-center">
+                <img v-if="p.image" :src="p.image" alt="Imagen" class="img-thumbnail" width="60" height="60" />
+                <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail" width="60" height="60" />
+              </td>
               <td class="producto-name">{{ p.name }}</td>
               <td class="producto-descripcion">{{ p.description }}</td>
               <td class="text-center">
@@ -108,8 +112,7 @@
       </div>
     </div>
 
-    <!-- MODALES -->
-    <!-- Modal Agregar -->
+    <!-- MODAL AGREGAR -->
     <div class="modal fade" id="modalGuardarProducto" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg">
@@ -118,6 +121,11 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
+            <div class="text-center mb-3">
+              <img v-if="productoNuevo.image" :src="productoNuevo.image" class="img-thumbnail" width="120" />
+              <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail" width="120" />
+              <input type="file" class="form-control mt-2" @change="previsualizarFoto('nuevo', $event)" accept="image/png, image/jpeg" />
+            </div>
             <input v-model="productoNuevo.name" class="form-control mb-2" placeholder="Nombre" />
             <input v-model="productoNuevo.description" class="form-control mb-2" placeholder="Descripción" />
             <input v-model.number="productoNuevo.price" type="number" class="form-control mb-2" placeholder="Precio" />
@@ -134,7 +142,7 @@
       </div>
     </div>
 
-    <!-- Modal Editar -->
+    <!-- MODAL EDITAR -->
     <div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg">
@@ -143,10 +151,14 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
+            <div class="text-center mb-3">
+              <img v-if="productoEditado.image" :src="productoEditado.image" class="img-thumbnail" width="120" />
+              <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail" width="120" />
+              <input type="file" class="form-control mt-2" @change="previsualizarFoto('editado', $event)" accept="image/png, image/jpeg" />
+            </div>
             <input v-model="productoEditado.name" class="form-control mb-2" placeholder="Nombre" />
             <input v-model="productoEditado.description" class="form-control mb-2" placeholder="Descripción" />
-            <input v-model.number="productoEditado.price" type="number" class="form-control mb-2"
-              placeholder="Precio" />
+            <input v-model.number="productoEditado.price" type="number" class="form-control mb-2" placeholder="Precio" />
             <select v-model="productoEditado.category.id" class="form-select">
               <option value="0">Seleccione categoría</option>
               <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
@@ -162,11 +174,9 @@
   </div>
 </template>
 
-
 <script>
 import { mostrarAlerta, confirmar } from "@/functions.js";
 import Modal from "bootstrap/js/dist/modal";
-
 import {
   getProducts,
   getProductById,
@@ -177,7 +187,6 @@ import {
   updateProduct,
   deleteProduct,
 } from "@/services/products";
-
 import { getCategories } from "@/services/categories";
 
 export default {
@@ -186,19 +195,8 @@ export default {
     return {
       productos: [],
       categorias: [],
-      productoNuevo: {
-        name: "",
-        description: "",
-        price: 0,
-        category: { id: 0 },
-      },
-      productoEditado: {
-        id: 0,
-        name: "",
-        description: "",
-        price: 0,
-        category: { id: 0 },
-      },
+      productoNuevo: { name: "", description: "", price: 0, image: "", category: { id: 0 } },
+      productoEditado: { id: 0, name: "", description: "", price: 0, image: "", category: { id: 0 } },
       cargando: false,
       modalAgregar: null,
       modalEditar: null,
@@ -209,38 +207,27 @@ export default {
     };
   },
   mounted() {
-    this.modalAgregar = new Modal(
-      document.getElementById("modalGuardarProducto")
-    );
-    this.modalEditar = new Modal(
-      document.getElementById("modalEditarProducto")
-    );
+    this.modalAgregar = new Modal(document.getElementById("modalGuardarProducto"));
+    this.modalEditar = new Modal(document.getElementById("modalEditarProducto"));
     this.obtenerProductos();
     this.obtenerCategorias();
   },
   methods: {
+    previsualizarFoto(tipo, event) {
+      const reader = new FileReader();
+      reader.readAsDataURL(event.target.files[0]);
+      reader.onload = () => {
+        const base64 = reader.result;
+        if (tipo === "nuevo") this.productoNuevo.image = base64;
+        else this.productoEditado.image = base64;
+      };
+    },
+
     validarProducto(producto) {
-      if (!producto.name?.trim()) {
-        mostrarAlerta("Información inválida", "info", "Ingrese el nombre");
-        return false;
-      } else if (!producto.description?.trim()) {
-        mostrarAlerta("Información inválida", "info", "Ingrese la descripción");
-        return false;
-      } else if (isNaN(producto.price) || producto.price <= 0) {
-        mostrarAlerta(
-          "Información inválida",
-          "info",
-          "Ingrese el precio correctamente"
-        );
-        return false;
-      } else if (!producto.category || producto.category.id === 0) {
-        mostrarAlerta(
-          "Información incompleta",
-          "info",
-          "Seleccione una categoría"
-        );
-        return false;
-      }
+      if (!producto.name?.trim()) return mostrarAlerta("Ingrese el nombre", "warning");
+      if (!producto.description?.trim()) return mostrarAlerta("Ingrese la descripción", "warning");
+      if (!producto.price || producto.price <= 0) return mostrarAlerta("Ingrese un precio válido", "warning");
+      if (producto.category.id === 0) return mostrarAlerta("Seleccione una categoría", "warning");
       return true;
     },
 
@@ -248,45 +235,27 @@ export default {
       this.cargando = true;
       try {
         this.productos = await getProducts();
-      } catch (error) {
-        mostrarAlerta("Error al cargar los productos", "danger");
       } finally {
         this.cargando = false;
       }
     },
 
     async obtenerCategorias() {
-      try {
-        this.categorias = await getCategories();
-      } catch (error) {
-        mostrarAlerta("Error al cargar las categorías", "danger");
-      }
+      this.categorias = await getCategories();
     },
 
     async filtrarBusqueda() {
       if (!this.filtro.trim()) return this.obtenerProductos();
-      try {
-        this.productos = await searchProducts(this.filtro);
-      } catch {
-        mostrarAlerta("Error en la búsqueda", "danger");
-      }
+      this.productos = await searchProducts(this.filtro);
     },
 
     async filtrarPorCategoria() {
       if (this.filtroCategoria == 0) return this.obtenerProductos();
-      try {
-        this.productos = await filterByCategory(this.filtroCategoria);
-      } catch {
-        mostrarAlerta("Error al filtrar por categoría", "danger");
-      }
+      this.productos = await filterByCategory(this.filtroCategoria);
     },
 
     async filtrarPorPrecio() {
-      try {
-        this.productos = await filterByPrice(this.precioMin, this.precioMax);
-      } catch {
-        mostrarAlerta("Error al filtrar por precio", "danger");
-      }
+      this.productos = await filterByPrice(this.precioMin, this.precioMax);
     },
 
     limpiarFiltros() {
@@ -299,55 +268,31 @@ export default {
 
     async guardarProducto() {
       if (!this.validarProducto(this.productoNuevo)) return;
-      try {
-        await createProduct(this.productoNuevo);
-        this.productoNuevo = {
-          name: "",
-          description: "",
-          price: 0,
-          category: { id: 0 },
-        };
-        mostrarAlerta("Producto guardado exitosamente", "success");
-        this.obtenerProductos();
-        this.modalAgregar.hide();
-      } catch (error) {
-        mostrarAlerta("Error al guardar el producto", "danger");
-      }
+      await createProduct(this.productoNuevo);
+      mostrarAlerta("Producto guardado exitosamente", "success");
+      this.obtenerProductos();
+      this.modalAgregar.hide();
     },
 
     async obtenerPorId(id) {
-      try {
-        this.productoEditado = await getProductById(id);
-        this.modalEditar.show();
-      } catch (error) {
-        mostrarAlerta("Error al obtener los datos para editar", "danger");
-      }
+      this.productoEditado = await getProductById(id);
+      this.modalEditar.show();
     },
 
     async actualizarProducto() {
       if (!this.validarProducto(this.productoEditado)) return;
-      try {
-        await updateProduct(this.productoEditado);
-        mostrarAlerta("Producto actualizado correctamente", "success");
-        this.obtenerProductos();
-        this.modalEditar.hide();
-      } catch (error) {
-        mostrarAlerta("Error al actualizar el producto", "danger");
-      }
+      await updateProduct(this.productoEditado);
+      mostrarAlerta("Producto actualizado correctamente", "success");
+      this.obtenerProductos();
+      this.modalEditar.hide();
     },
 
     async eliminarProducto(id) {
-      try {
-        const confirmado = await confirmar("Eliminar producto", "¿Estás seguro de eliminar este producto?");
-        if (confirmado) {
-          await deleteProduct(id);
-          mostrarAlerta("Eliminado", "success");
-          this.obtenerProductos();
-        } else {
-          mostrarAlerta("Operación cancelada", "info");
-        }
-      } catch (error) {
-        mostrarAlerta("Error al eliminar el producto", "danger");
+      const confirmado = await confirmar("Eliminar producto", "¿Estás seguro de eliminar este producto?");
+      if (confirmado) {
+        await deleteProduct(id);
+        mostrarAlerta("Eliminado correctamente", "success");
+        this.obtenerProductos();
       }
     },
   },
