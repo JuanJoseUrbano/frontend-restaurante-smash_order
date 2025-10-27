@@ -1,11 +1,6 @@
 <template>
   <div>
-    <!-- Header -->
-    <HeaderAuthenticated 
-      :username="username" 
-      :roles="roles" 
-      :active-role="activeRole" 
-    />
+    <HeaderAuthenticated :username="username" :roles="roles" :active-role="activeRole" :user-id="userId" />
 
     <div v-if="isCustomer" class="dashboard-container">
       <!-- Sidebar -->
@@ -260,13 +255,13 @@ export default {
   padding: 1rem 1.2rem;
   border-radius: 18px;
   color: white;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .summary-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 25px rgba(0,0,0,0.18);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.18);
 }
 
 .card-icon {
@@ -310,7 +305,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  box-shadow: 0 5px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
 }
 

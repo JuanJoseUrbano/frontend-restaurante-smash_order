@@ -20,8 +20,18 @@ export async function getNotificationsByCustomer(customerId) {
   return response.data;
 }
 
+export async function getNotificationsUnreadByCustomer(customerId) {
+  const response = await api.get(`/notifications/customer/${customerId}/unread`);
+  return response.data;
+}
+
 export async function updateNotification(id, notification) {
   const response = await api.put(`/notifications/${id}`, notification);
+  return response.data;
+}
+
+export async function markNotificationAsRead(id) {
+  const response = await api.patch(`/notifications/customer/${id}/read`);
   return response.data;
 }
 
