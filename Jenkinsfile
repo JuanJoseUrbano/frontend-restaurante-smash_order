@@ -22,8 +22,8 @@ pipeline {
         stage('Install & Build') {
             steps {
                 script {
-                 // Detectamos si el package.json está en el workspace raíz o dentro de la subcarpeta
-                def buildPath = fileExists('package.json') ? '.' : 'frontend-restaurante-smash_order'
+            // Detectar si el package.json está en el workspace raíz o dentro de una subcarpeta
+            def buildPath = fileExists('package.json') ? '.' : 'frontend-restaurante-smash_order'
 
             sh """
                 echo "🚀 Usando ruta para build: ${buildPath}"
