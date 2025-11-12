@@ -15,16 +15,15 @@ pipeline {
         }
 
         stage('Install & Build') {
-            agent {
-                docker {
-                    image 'node:22-alpine'
-                    args '-v $PWD:/app -w /app'
-                }
-            }
             steps {
                 script {
-                    sh 'npm ci'
-                    sh 'npm run build'
+                    // Ejecuta Node dentro de un contenedor usando Docker DinD
+                    sh '''
+                        docker run --rm -u $(id -u):$(id -g) -v $PWD:/app -w /app node:22-alpine sh -c "
+                            npm ci
+                            npm run build
+                        "
+                    '''
                 }
             }
         }
@@ -32,7 +31,6 @@ pipeline {
         stage('Build & Tag Image') {
             when {
                 expression {
-                    // Puedes cambiar BRANCH_NAME por GIT_BRANCH si tu Jenkins lo usa así
                     return env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'quality'
                 }
             }
