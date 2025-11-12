@@ -1,97 +1,102 @@
 pipeline {
     agent any
-
+    
     environment {
-        REGISTRY = "ghcr.io"
-        IMAGE_NAME = "victorandres123/frontend-restaurante-smash_order"
-        NODE_IMAGE = "node:22-alpine"
+        DOCKER_REGISTRY = 'ghcr.io'
+        DOCKER_IMAGE = 'juanjoseurbano/frontend-restaurante-smash_order'
+        DOCKER_CREDENTIALS = 'ghcr-credentials'
     }
-
+    
     stages {
-
         stage('Checkout') {
             steps {
-                echo "📥 Descargando código fuente..."
+                echo '📥 Descargando código fuente...'
                 checkout scm
                 sh '''
-                    echo "📂 Workspace actual: $WORKSPACE"
+                    echo "📂 Workspace actual: ${WORKSPACE}"
                     echo "📄 Contenido del workspace tras checkout:"
-                    ls -la $WORKSPACE
+                    ls -la ${WORKSPACE}
                 '''
             }
         }
-
+        
         stage('Install & Build') {
             steps {
                 script {
-                    // Detectar si el package.json está en el raíz o en subcarpeta
-                    def buildPath = fileExists('package.json') ? '.' : 'frontend-restaurante-smash_order'
-
+                    def buildPath = '.'
+                    if (fileExists('frontend-restaurante-smash_order')) {
+                        buildPath = 'frontend-restaurante-smash_order'
+                    }
+                    
                     sh """
                         echo "🚀 Usando ruta para build: ${buildPath}"
                         echo "📦 Archivos disponibles antes de montar:"
                         ls -la ${buildPath}
-
                         echo "👷 Corrigiendo permisos de workspace..."
                         sudo chown -R jenkins:jenkins ${WORKSPACE} || true
-
                         echo "🐳 Ejecutando build dentro del contenedor Node..."
-                        docker run --rm \
-                            -v ${WORKSPACE}/${buildPath}:/app \
-                            -w /app \
-                            ${NODE_IMAGE} sh -c '
-                                echo "📦 Archivos en /app:"
-                                ls -la /app
-                                if [ -f package-lock.json ]; then
-                                    echo "📦 Ejecutando npm ci..."
-                                    npm ci
-                                else
-                                    echo "📦 Ejecutando npm install..."
-                                    npm install
-                                fi
-                                echo "🏗️ Ejecutando build..."
-                                npm run build
-                            '
+                        docker run --rm -v \${WORKSPACE}:/app -w /app node:22-alpine sh -c '
+                            echo "📦 Archivos en /app:"
+                            ls -la /app
+                            if [ -f package-lock.json ]; then
+                                echo "📦 Ejecutando npm ci..."
+                                npm ci
+                            else
+                                echo "📦 Ejecutando npm install..."
+                                npm install
+                            fi
+                            echo "🏗️ Ejecutando build..."
+                            npm run build
+                        '
                     """
                 }
             }
         }
-
+        
         stage('Build & Tag Image') {
             steps {
                 script {
-                    echo "🐳 Construyendo imagen Docker..."
-                    def commit = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    def imageTag = "${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+                    def latestTag = "${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${env.BRANCH_NAME}-latest"
+                    
+                    echo "🐳 Construyendo imagen Docker: ${imageTag}"
                     sh """
-                        docker build -t ${REGISTRY}/${IMAGE_NAME}:${commit} -t ${REGISTRY}/${IMAGE_NAME}:latest .
+                        docker build -t ${imageTag} .
+                        docker tag ${imageTag} ${latestTag}
                     """
+                    
+                    env.IMAGE_TAG = imageTag
+                    env.LATEST_TAG = latestTag
                 }
             }
         }
-
+        
         stage('Push Image') {
             steps {
                 script {
-                    echo "📤 Enviando imagen al registro..."
-                    def commit = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    withCredentials([string(credentialsId: 'ghcr-token', variable: 'TOKEN')]) {
+                    echo "📤 Subiendo imagen a GitHub Container Registry..."
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDENTIALS) {
                         sh """
-                            echo $TOKEN | docker login ${REGISTRY} -u ${IMAGE_NAME} --password-stdin
-                            docker push ${REGISTRY}/${IMAGE_NAME}:${commit}
-                            docker push ${REGISTRY}/${IMAGE_NAME}:latest
+                            docker push ${env.IMAGE_TAG}
+                            docker push ${env.LATEST_TAG}
                         """
                     }
+                    echo "✅ Imagen subida exitosamente: ${env.IMAGE_TAG}"
                 }
             }
         }
     }
-
+    
     post {
         success {
-            echo "✅ Build y push completados exitosamente."
+            echo '✅ Pipeline ejecutado exitosamente!'
         }
         failure {
-            echo "❌ Error en el build."
+            echo '❌ Error en el build.'
+        }
+        always {
+            echo '🧹 Limpiando workspace...'
+            cleanWs()
         }
     }
 }
