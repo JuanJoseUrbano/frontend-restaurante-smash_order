@@ -22,34 +22,46 @@ pipeline {
         
         stage('Install & Build') {
             steps {
-                script {
-                    def buildPath = '.'
-                    if (fileExists('frontend-restaurante-smash_order')) {
-                        buildPath = 'frontend-restaurante-smash_order'
-                    }
+                sh """
+                    echo "🚀 Trabajando en el workspace raíz"
+                    echo "📦 Archivos disponibles:"
+                    ls -la
                     
-                    sh """
-                        echo "🚀 Usando ruta para build: ${buildPath}"
-                        echo "📦 Archivos disponibles antes de montar:"
-                        ls -la ${buildPath}
-                        echo "👷 Corrigiendo permisos de workspace..."
-                        sudo chown -R jenkins:jenkins ${WORKSPACE} || true
-                        echo "🐳 Ejecutando build dentro del contenedor Node..."
-                        docker run --rm -v \${WORKSPACE}:/app -w /app node:22-alpine sh -c '
-                            echo "📦 Archivos en /app:"
-                            ls -la /app
-                            if [ -f package-lock.json ]; then
-                                echo "📦 Ejecutando npm ci..."
-                                npm ci
-                            else
-                                echo "📦 Ejecutando npm install..."
-                                npm install
-                            fi
-                            echo "🏗️ Ejecutando build..."
-                            npm run build
-                        '
-                    """
-                }
+                    echo "🧹 Limpiando directorios problemáticos..."
+                    rm -rf frontend-restaurante-smash_order frontend-restaurante-smash_order@tmp || true
+                    
+                    echo "📄 Verificando package.json:"
+                    if [ -f package.json ]; then
+                        echo "✅ package.json encontrado"
+                        cat package.json | head -n 10
+                    else
+                        echo "❌ package.json NO encontrado"
+                        exit 1
+                    fi
+                    
+                    echo "🐳 Ejecutando build dentro del contenedor Node..."
+                    docker run --rm -v \${WORKSPACE}:/app -w /app node:22-alpine sh -c '
+                        echo "📦 Archivos en /app:"
+                        ls -la /app
+                        
+                        echo "📋 Verificando package.json en contenedor:"
+                        cat /app/package.json | head -n 10
+                        
+                        if [ -f package-lock.json ]; then
+                            echo "📦 Ejecutando npm ci..."
+                            npm ci
+                        else
+                            echo "📦 Ejecutando npm install..."
+                            npm install
+                        fi
+                        
+                        echo "🏗️ Ejecutando build..."
+                        npm run build
+                        
+                        echo "✅ Build completado. Verificando dist:"
+                        ls -la dist/ || ls -la build/ || echo "Directorio de salida no encontrado"
+                    '
+                """
             }
         }
         
