@@ -18,12 +18,14 @@ pipeline {
             steps {
                 script {
                     // Ejecuta Node dentro de un contenedor usando Docker DinD
-                    sh '''
-                        docker run --rm -u $(id -u):$(id -g) -v $PWD:/app -w /app node:22-alpine sh -c "
-                            npm ci
-                            npm run build
-                        "
-                    '''
+                    dir('frontend-restaurante-smash_order') {
+                        sh '''
+                            docker run --rm -u $(id -u):$(id -g) -v $PWD:/app -w /app node:22-alpine sh -c "
+                                npm ci
+                                npm run build
+                            "
+                        '''
+                    }
                 }
             }
         }
