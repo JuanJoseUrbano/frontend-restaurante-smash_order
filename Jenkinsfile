@@ -15,13 +15,14 @@ pipeline {
                     '''
 
                     // Detectamos si el package.json está en el workspace raíz o dentro de la subcarpeta
-                    def buildPath = fileExists('package.json') ? '.' : 'frontend-restaurante-smash_order'
+                    def buildPath = fileExists('package.json') ? '' : 'frontend-restaurante-smash_order'
 
                     sh """
                         echo 'Usando ruta para build: ${buildPath}'
-                        docker run --rm -u \$(id -u):\$(id -g) \
+                        docker run --rm \
                             -v \$WORKSPACE/${buildPath}:/app -w /app \
                             node:22-alpine sh -c '
+                                echo "📦 Archivos en /app:" && ls -la /app
                                 if [ -f package-lock.json ]; then
                                     npm ci
                                 else
