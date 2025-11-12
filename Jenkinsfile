@@ -1,78 +1,31 @@
-pipeline {
-    agent any
+stage('Install & Build') {
+    steps {
+        script {
+            // Verificamos dónde está el package.json
+            sh '''
+                echo "📂 Workspace actual: $WORKSPACE"
+                echo "📄 Contenido del workspace:"
+                ls -la $WORKSPACE
+                echo "📄 Contenido posible subcarpeta:"
+                ls -la $WORKSPACE/frontend-restaurante-smash_order || true
+            '''
 
-    environment {
-        REGISTRY = 'ghcr.io'
-        IMAGE_NAME = 'victorandres123/frontend-restaurante-smash_order'
-        CREDENTIAL_ID = 'ghcr-credentials'
-    }
+            // Detectamos si el package.json está en el workspace raíz o dentro de la subcarpeta
+            def buildPath = fileExists('package.json') ? '.' : 'frontend-restaurante-smash_order'
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Install & Build') {
-            steps {
-                script {
-                    // Ejecuta Node dentro de un contenedor usando Docker DinD
-                    dir('frontend-restaurante-smash_order') {
-                        sh '''
-                            docker run --rm -u $(id -u):$(id -g) -v $PWD:/app -w /app node:22-alpine sh -c "
-                                npm ci
-                                npm run build
-                            "
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Build & Tag Image') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'quality'
-                }
-            }
-            steps {
-                script {
-                    def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
-                    docker.build("${fullImageName}:${shortCommit}", '.')
-                    sh "docker tag ${fullImageName}:${shortCommit} ${fullImageName}:latest"
-                }
-            }
-        }
-
-        stage('Push Image') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'quality'
-                }
-            }
-            steps {
-                script {
-                    def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
-                    docker.withRegistry("https://${env.REGISTRY}", env.CREDENTIAL_ID) {
-                        docker.image("${fullImageName}:${shortCommit}").push()
-                        docker.image("${fullImageName}:latest").push()
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            script {
-                def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                def fullImageName = "${env.REGISTRY}/${env.IMAGE_NAME}"
-                sh "docker rmi ${fullImageName}:${shortCommit} || true"
-                sh "docker rmi ${fullImageName}:latest || true"
-            }
+            sh """
+                echo 'Usando ruta para build: ${buildPath}'
+                docker run --rm -u \$(id -u):\$(id -g) \
+                    -v \$WORKSPACE/${buildPath}:/app -w /app \
+                    node:22-alpine sh -c '
+                        if [ -f package-lock.json ]; then
+                            npm ci
+                        else
+                            npm install
+                        fi
+                        npm run build
+                    '
+            """
         }
     }
 }
