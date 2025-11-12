@@ -1,33 +1,48 @@
 pipeline {
     agent any
 
+    environment {
+        NODE_IMAGE = 'node:22-alpine'
+    }
+
     stages {
+
+        stage('Checkout') {
+            steps {
+                echo '📥 Descargando código fuente...'
+                checkout scm
+                sh '''
+                    echo "📂 Workspace actual: $WORKSPACE"
+                    echo "📄 Contenido del workspace tras checkout:"
+                    ls -la $WORKSPACE
+                '''
+            }
+        }
+
         stage('Install & Build') {
             steps {
                 script {
-                    // Verificamos dónde está el package.json
-                    sh '''
-                        echo "📂 Workspace actual: $WORKSPACE"
-                        echo "📄 Contenido del workspace:"
-                        ls -la $WORKSPACE
-                        echo "📄 Contenido posible subcarpeta:"
-                        ls -la $WORKSPACE/frontend-restaurante-smash_order || true
-                    '''
-
-                    // Detectamos si el package.json está en el workspace raíz o dentro de la subcarpeta
-                    def buildPath = fileExists('package.json') ? '' : 'frontend-restaurante-smash_order'
+                    // Detectar si el package.json está en el root o dentro de una subcarpeta
+                    def buildPath = fileExists('package.json') ? '.' : 'frontend-restaurante-smash_order'
 
                     sh """
-                        echo 'Usando ruta para build: ${buildPath}'
-                        docker run --rm \
-                            -v \$WORKSPACE/${buildPath}:/app -w /app \
-                            node:22-alpine sh -c '
-                                echo "📦 Archivos en /app:" && ls -la /app
+                        echo "🚀 Usando ruta para build: ${buildPath}"
+                        echo "📦 Archivos disponibles antes de montar:"
+                        ls -la ${buildPath}
+
+                        docker run --rm -u \$(id -u):\$(id -g) \
+                            -v ${pwd()}/${buildPath}:/app -w /app \
+                            ${NODE_IMAGE} sh -c '
+                                echo "📦 Archivos en /app:"
+                                ls -la /app
                                 if [ -f package-lock.json ]; then
+                                    echo "📦 Ejecutando npm ci..."
                                     npm ci
                                 else
+                                    echo "📦 Ejecutando npm install..."
                                     npm install
                                 fi
+                                echo "🏗️ Ejecutando build..."
                                 npm run build
                             '
                     """
@@ -38,10 +53,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Build completado exitosamente"
+            echo '✅ Build completado correctamente.'
         }
         failure {
-            echo "❌ Error en el build"
+            echo '❌ Error en el build.'
         }
     }
 }
