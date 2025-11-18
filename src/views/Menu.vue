@@ -1,10 +1,4 @@
 <template>
-  <div class="text-end mt-3 me-3" v-if="roles.length > 1">
-    <button class="btn btn-outline-dark btn-sm" @click="cambiarRol">
-      <i class="fas fa-exchange-alt me-1"></i> Cambiar Rol
-    </button>
-  </div>
-
   <div class="catalogo-container">
     <!-- HEADER -->
     <div class="catalogo-header shadow-sm text-center">
@@ -90,13 +84,29 @@
 
     <div v-else class="row row-cols-1 row-cols-md-3 g-4">
       <div v-for="p in productos" :key="p.id" class="col">
-        <div class="card h-100 shadow-sm">
+        <div class="card producto-card h-100 shadow-sm">
+          <!-- Imagen del producto -->
+          <div class="imagen-container">
+            <img
+              v-if="p.image"
+              :src="p.image.startsWith('data:image') ? p.image : `data:image/png;base64,${p.image}`"
+              alt="Imagen del producto"
+              class="card-img-top producto-img"
+            />
+            <div
+              v-else
+              class="sin-imagen d-flex align-items-center justify-content-center"
+            >
+              <i class="fas fa-image fa-3x text-muted"></i>
+            </div>
+          </div>
+
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ p.name }}</h5>
             <p class="card-text text-truncate">{{ p.description }}</p>
 
             <div class="mt-auto d-flex justify-content-between align-items-center">
-              <span class="badge bg-success fs-6">${{ p.price }}</span>
+              <span class="badge bg-success fs-6">{{ formatearPrecio(p.price) }}</span>
               <span class="badge bg-secondary">{{ p.category?.name || "Sin Categoría" }}</span>
             </div>
 
@@ -127,7 +137,7 @@
             >
               <div>
                 <strong>{{ item.name }}</strong><br />
-                <small class="text-muted">${{ item.price }} x {{ item.cantidad }}</small>
+                <small class="text-muted">{{ formatearPrecio(item.price) }} x {{ item.cantidad }}</small>
               </div>
               <div>
                 <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, -1)">-</button>
@@ -147,7 +157,7 @@
             </select>
           </div>
 
-          <h5 class="text-end">Total: <span class="text-success">${{ totalCarrito }}</span></h5>
+          <h5 class="text-end">Total: <span class="text-success">{{ formatearPrecio(totalCarrito) }}</span></h5>
 
           <button class="btn btn-success w-100 mt-3" @click="abrirModalPago">
             <i class="fas fa-check me-1"></i> Confirmar Pedido
@@ -166,7 +176,7 @@
             <button type="button" class="btn-close" @click="cerrarModalPago"></button>
           </div>
           <div class="modal-body">
-            <p>Total a pagar: <strong>${{ totalCarrito }}</strong></p>
+            <p>Total a pagar: <strong>{{ formatearPrecio(totalCarrito) }}</strong></p>
 
             <label class="form-label">Método de pago</label>
             <select v-model="metodoPago" class="form-select">
@@ -231,6 +241,14 @@ export default {
     this.cargarMetodos();
   },
   methods: {
+    formatearPrecio(valor) {
+      if (!valor) return "$0";
+      return valor.toLocaleString("es-CO", {
+        style: "currency",
+        currency: "COP",
+        minimumFractionDigits: 0,
+      });
+    },
     toggleCarrito() {
       this.mostrarCarrito = !this.mostrarCarrito;
     },
@@ -400,6 +418,7 @@ export default {
 }
 .catalogo-container {
   padding: 2rem;
+  background: #f8f9fa;
 }
 .catalogo-header {
   background: white;
@@ -421,5 +440,39 @@ export default {
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+/* Imagen del producto */
+.imagen-container {
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+  overflow: hidden;
+}
+.producto-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+.producto-img:hover {
+  transform: scale(1.05);
+}
+.sin-imagen {
+  height: 220px;
+  background-color: #f0f0f0;
+}
+
+/* Botón agregar */
+.btn-agregar {
+  background-color: #580e00;
+  color: white;
+  border-radius: 10px;
+  transition: 0.3s;
+}
+.btn-agregar:hover {
+  background-color: #71160a;
 }
 </style>

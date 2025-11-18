@@ -61,8 +61,6 @@
             <tr>
               <th class="text-center"># Pedido</th>
               <th class="text-center">Cliente</th>
-              <th class="text-center">Mesa</th>
-              <th class="text-center">Estado Pedido</th>
               <th class="text-center">Método Pago</th>
               <th class="text-center">Monto</th>
               <th class="text-center">Fecha Pago</th>
@@ -75,8 +73,6 @@
             <tr v-for="p in pagos" :key="p.id" class="pago-row">
               <td class="text-center">{{ p.order.id }}</td>
               <td class="text-center">{{ p.order?.customer?.name }}</td>
-              <td class="text-center">Mesa {{ p.order?.table?.number }}</td>
-              <td class="text-center">{{ traducirEstadoPedido(p.order?.status) }}</td>
               <td class="text-center">{{ p.paymentMethod?.name }}</td>
               <td class="text-center">${{ p.total.toLocaleString() }}</td>
               <td class="text-center">{{ !p.paymentDate || p.paymentDate.startsWith('1969-12-31') ? 'Sin pago' : formatDate(p.paymentDate) }}</td>
@@ -466,13 +462,6 @@ export default {
       if (estado === "REFUNDED") return "Reembolsado";
       return estado;
     },
-    traducirEstadoPedido(estado) {
-      if (estado === "PENDING") return "Pendiente";
-      if (estado === "IN_PROGRESS") return "En progreso";
-      if (estado === "COMPLETED") return "Completado";
-      if (estado === "CANCELLED") return "Cancelado";
-      return estado;
-    },
     formatDate(fecha) {
       return new Date(fecha).toLocaleString();
     }
@@ -481,20 +470,26 @@ export default {
 </script>
 
 <style>
+.pagos-container {
+  padding: 1.5rem 2rem;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
 .pagos-header {
   text-align: center;
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
+  padding: 2rem 1rem;
+  background: linear-gradient(90deg, #fff, #f7f3f2);
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(88, 14, 0, 0.12);
 }
 
 .pagos-title {
-  color: var(--primary-color);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  font-size: 2.2rem;
+  color: #580e00;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
+  font-size: 2.4rem;
+  letter-spacing: 0.5px;
 }
 
 .pagos-subtitle {
@@ -503,128 +498,186 @@ export default {
   margin: 0;
 }
 
-.btn-custom {
-  border: none;
-  font-weight: 600;
-  border-radius: 8px;
-  padding: 0.6rem 1.2rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.pagos-actions {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  padding: 1.2rem 1.8rem !important;
+  margin-bottom: 2rem;
 }
 
-.btn-agregar {
-  background-color: var(--primary-color, #e63946);
+.btn-guardar {
+  background: #580e00;
   color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  padding: 0.65rem 1.3rem;
 }
 
-.btn-agregar:hover {
-  background-color: var(--primary-dark, #c62828);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+.btn-guardar:hover {
+  background: #761f11;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(88, 14, 0, 0.25);
 }
 
 .btn-buscar {
-  background-color: var(--secondary-color, #4caf50);
-  color: #fff;
-  padding: 0.55rem 1rem;
+  background: #580e00;
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
   border-radius: 0 8px 8px 0;
 }
 
 .btn-buscar:hover {
-  background-color: #3e8e41;
-}
-
-.btn-limpiar {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.btn-limpiar:hover {
-  background-color: #e0e0e0;
-}
-
-/* Estilos búsqueda */
-.search-container {
-  display: flex;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: #761f11;
 }
 
 .search-input {
-  flex: 1;
-  padding: 0.55rem 1rem;
-  border: 1px solid #ccc;
-  border-right: none;
   border-radius: 8px 0 0 8px;
+  border: 1px solid #ddd;
+  box-shadow: none;
+  transition: border 0.2s ease;
 }
 
-/* Modal personalizado */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
+.search-input:focus {
+  border-color: #580e00;
 }
 
-.modal-custom {
+.state-select {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  transition: border 0.2s ease;
+}
+
+.state-select:focus {
+  border-color: #580e00;
+  box-shadow: none;
+}
+
+.pagos-table-container {
   background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 100%;
-}
-
-.categorias-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  border-radius: 14px;
   padding: 1.5rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-.categorias-title {
-  color: var(--primary-color, #e63946);
+.table {
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.table thead {
+  background: #faf7f7;
+  border-bottom: 2px solid #ddd;
+}
+
+.table thead th {
+  color: #580e00;
   font-weight: 700;
-  margin-bottom: 0.5rem;
-  font-size: 2.2rem;
+  text-transform: uppercase;
+  font-size: 0.9rem;
 }
 
-.categorias-subtitle {
-  color: var(--text-light, #777);
-  font-size: 1.1rem;
-  margin-bottom: 1rem;
+.table tbody tr {
+  background: #fff;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 
-.categorias-actions {
-  margin-top: 1.5rem;
+.table tbody tr:hover {
+  background: #fff8f6;
+  transform: scale(1.005);
 }
 
-.categorias-table-container {
-  background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
-  overflow: hidden;
+.table td {
+  vertical-align: middle;
+  padding: 0.9rem;
+  border-top: none;
 }
 
 .action-buttons .btn {
   border-radius: 6px;
-  padding: 0.4rem 0.8rem;
-  transition: all 0.2s ease;
+  padding: 0.45rem 0.75rem;
+  transition: all 0.25s ease;
 }
 
 .action-buttons .btn:hover {
   transform: translateY(-2px);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 3.5rem;
+  color: #580e00;
+  margin-bottom: 1rem;
+}
+.loading-spinner {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.loading-spinner p {
+  margin-top: 1rem;
+  color: #580e00;
+  font-weight: 600;
+}
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: none;
+}
+
+.modal-footer {
+  border-top: none;
+}
+
+.modal-body label {
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  transition: border 0.2s ease;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+  border-color: #580e00;
+  box-shadow: none;
+}
+
+.list-group-item-action {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.list-group-item-action:hover {
+  background: #fff3ef;
+}
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #c1b0ad;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #a58a86;
 }
 </style>
