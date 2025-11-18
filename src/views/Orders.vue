@@ -32,7 +32,7 @@
 
                 <!-- Fecha -->
                 <div class="col-lg-2 col-md-3">
-                    <input type="date" class="form-control" v-model="filtroFecha" @change="filtrarPorFecha" />
+                    <input type="date" class="form-control" v-model="filtroFecha" @click="filtrarPorFecha" />
                 </div>
 
                 <!-- Limpiar -->
@@ -61,14 +61,13 @@
 
         <!-- TABLA -->
         <div class="pedidos-table-container shadow-sm">
-            <div v-if="cargando" class="loading-spinner">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p>Cargando Pedidos...</p>
+            <!-- SPINNER CORPORATIVO -->
+            <div v-if="cargando" class="loading-overlay">
+                <div class="spinner"></div>
+                <p class="mt-3 fw-semibold text-secondary">Cargando pedidos...</p>
             </div>
 
-            <div v-else-if="pedidos.length === 0" class="empty-state">
+            <div v-else-if="pedidosFiltrados.length === 0" class="empty-state">
                 <i class="fas fa-clipboard-list empty-icon"></i>
                 <h4>No hay pedidos registrados</h4>
                 <p>Cuando se generen pedidos aparecerán aquí</p>
@@ -88,13 +87,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="o in pedidos" :key="o.id" class="pedido-row">
+                        <tr v-for="o in pedidosFiltrados" :key="o.id" class="pedido-row">
                             <td class="text-center">{{ o.id }}</td>
                             <td>{{ o.customer?.name }}</td>
                             <td class="text-center">Mesa {{ o.table?.number }}</td>
                             <td class="text-center">{{ formatDate(o.date) }}</td>
                             <td class="text-center">
-                                <span class="badge" :class="badgeClass(o.status)">{{ traducirEstado(o.status) }}</span>
+                                <span class="badge" :class="badgeClass(o.status)">
+                                    {{ traducirEstado(o.status) }}
+                                </span>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-success fs-6">${{ (o.total || 0).toFixed(2) }}</span>
@@ -115,12 +116,32 @@
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- PAGINACIÓN -->
+                <nav class="d-flex justify-content-center mt-4">
+                    <ul class="pagination">
+                        <li class="page-item" :class="{ disabled: paginaActual === 0 }">
+                            <button class="page-link" @click="cambiarPagina(paginaActual - 1)">Anterior</button>
+                        </li>
+
+                        <li v-for="n in totalPaginas" :key="n" class="page-item"
+                            :class="{ active: paginaActual === n - 1 }">
+                            <button class="page-link" @click="cambiarPagina(n - 1)">{{ n }}</button>
+                        </li>
+
+                        <li class="page-item" :class="{ disabled: paginaActual === totalPaginas - 1 }">
+                            <button class="page-link" @click="cambiarPagina(paginaActual + 1)">Siguiente</button>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         </div>
 
+
         <!-- MODAL DETALLE -->
+
         <div class="modal fade" id="modalDetallePedido" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content shadow-lg">
                     <div class="modal-header bg-dark text-white">
                         <h5 class="modal-title">Detalle del Pedido #{{ pedidoSeleccionado?.id }}</h5>
@@ -163,7 +184,7 @@
 
         <!-- MODAL EDITAR -->
         <div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content shadow-lg">
                     <div class="modal-header">
                         <h5 class="modal-title">Editar Pedido #{{ pedidoSeleccionado?.id }}</h5>
@@ -386,7 +407,15 @@
 <script>
 import { mostrarAlerta, confirmar } from "@/functions.js";
 import Modal from "bootstrap/js/dist/modal";
-import { getOrders, deleteOrder, updateOrder, createOrder } from "@/services/orders";
+import {
+    getOrdersPaginated,
+    getOrdersByCustomerName,
+    getOrdersByStatus,
+    getOrdersByDate,
+    deleteOrder,
+    updateOrder,
+    createOrder,
+} from "@/services/orders";
 import { getProducts } from "@/services/products";
 import { getPayments } from "@/services/paymentMethods.js";
 import { getTables } from "@/services/tables";
@@ -398,8 +427,10 @@ export default {
     data() {
         return {
             pedidos: [],
-            invoice: { paymentMethodId: "", status: "PENDING" },
-            pedidosOriginales: [],
+            pedidosFiltrados: [],
+            paginaActual: 0,
+            elementosPorPagina: 5,
+            totalPaginas: 0,
             pedidoSeleccionado: null,
             pedidoNuevo: null,
             cargando: false,
@@ -413,20 +444,19 @@ export default {
             mesasDisponibles: [],
             busquedaCliente: "",
             resultadosCliente: [],
-            actualizandoPedidos: false,
-            timeoutBusqueda: null,
-            timeoutFiltro: null,
-            metodos: []
+            metodos: [],
+            invoice: { paymentMethodId: "", status: "PENDING" },
         };
     },
-    mounted() {
-        nextTick(() => {
-            this.modalDetalle = new Modal(document.getElementById("modalDetallePedido"));
-            this.modalEditar = new Modal(document.getElementById("modalEditarPedido"));
-            this.modalNuevo = new Modal(document.getElementById("modalNuevoPedido"));
-        });
+
+    async mounted() {
+        await nextTick();
+        this.modalDetalle = new Modal(document.getElementById("modalDetallePedido"));
+        this.modalEditar = new Modal(document.getElementById("modalEditarPedido"));
+        this.modalNuevo = new Modal(document.getElementById("modalNuevoPedido"));
         this.inicializarDatos();
     },
+
     methods: {
         async inicializarDatos() {
             this.cargando = true;
@@ -435,10 +465,10 @@ export default {
                     this.obtenerPedidos(),
                     this.cargarProductos(),
                     this.cargarMesas(),
-                    this.cargarMetodos()
+                    this.cargarMetodos(),
                 ]);
             } catch (error) {
-                console.error('Error inicializando datos:', error);
+                console.error("Error inicializando datos:", error);
                 mostrarAlerta("Error al cargar los datos iniciales", "danger");
             } finally {
                 this.cargando = false;
@@ -446,59 +476,176 @@ export default {
         },
 
         async obtenerPedidos() {
-            try {
-                const pedidos = await getOrders();
-                this.pedidosOriginales = pedidos;
-                this.pedidos = [...pedidos];
-            } catch (error) {
-                console.error('Error obteniendo pedidos:', error);
-                throw error;
-            }
-        },
-        async cargarMetodos() {
-            this.cargando = true;
-            try { this.metodos = await getPayments(); }
-            catch { mostrarAlerta("Error al cargar los métodos de pago", "danger"); }
-            finally { this.cargando = false; }
-        },
+    this.cargando = true;
+    try {
+        let data;
+        
+        // Si hay un filtro activo, paginar desde los resultados guardados
+        if (this.filtroActivo && this.todosLosResultadosFiltrados.length > 0) {
+            const inicio = this.paginaActual * this.elementosPorPagina;
+            const fin = inicio + this.elementosPorPagina;
+            const paginados = this.todosLosResultadosFiltrados.slice(inicio, fin);
+            
+            data = {
+                content: paginados,
+                totalPages: Math.ceil(this.todosLosResultadosFiltrados.length / this.elementosPorPagina),
+            };
+        } else if (!this.filtroActivo) {
+            // Sin filtros, paginación normal desde el backend
+            data = await getOrdersPaginated(this.paginaActual, this.elementosPorPagina);
+        } else {
+            data = { content: [], totalPages: 1 };
+        }
+        
+        this.pedidos = data.content || [];
+        this.totalPaginas = data.totalPages || 1;
+        this.pedidosFiltrados = [...this.pedidos];
+    } catch (error) {
+        console.error("Error obteniendo pedidos:", error);
+        mostrarAlerta("Error al obtener pedidos", "danger");
+        this.pedidos = [];
+        this.pedidosFiltrados = [];
+    } finally {
+        this.cargando = false;
+    }
+},
 
-        async actualizarListaPedidos() {
-            if (this.actualizandoPedidos) return;
+// PASO 3: REEMPLAZA filtrarBusqueda()
+async filtrarBusqueda() {
+    if (!this.filtro.trim()) {
+        this.filtroActivo = null;
+        this.todosLosResultadosFiltrados = [];
+        this.filtroEstado = "0";
+        this.filtroFecha = "";
+        this.paginaActual = 0;
+        return this.obtenerPedidos();
+    }
 
-            this.actualizandoPedidos = true;
-            try {
-                await this.obtenerPedidos();
-                this.aplicarFiltros();
-            } catch (error) {
-                console.error('Error actualizando pedidos:', error);
-            } finally {
-                this.actualizandoPedidos = false;
-            }
-        },
+    this.cargando = true;
+    try {
+        const data = await getOrdersByCustomerName(this.filtro.trim());
+        this.todosLosResultadosFiltrados = Array.isArray(data) ? data : (data.content || []);
+        
+        this.filtroActivo = 'busqueda';
+        this.filtroEstado = "0";
+        this.filtroFecha = "";
+        this.paginaActual = 0;
+        
+        await this.obtenerPedidos();
+        
+        if (this.todosLosResultadosFiltrados.length === 0) {
+            mostrarAlerta("No se encontraron pedidos para ese cliente", "info");
+        }
+    } catch (error) {
+        console.error("Error filtrando por cliente:", error);
+        mostrarAlerta("Error al filtrar por cliente", "danger");
+        this.pedidos = [];
+        this.pedidosFiltrados = [];
+        this.todosLosResultadosFiltrados = [];
+    } finally {
+        this.cargando = false;
+    }
+},
 
-        async cargarProductos() {
-            try {
-                this.productosDisponibles = await getProducts();
-            } catch (error) {
-                console.error('Error cargando productos:', error);
-                throw error;
-            }
-        },
+// PASO 4: REEMPLAZA filtrarPorEstado()
+async filtrarPorEstado() {
+    if (this.filtroEstado === "0") {
+        this.filtroActivo = null;
+        this.todosLosResultadosFiltrados = [];
+        this.filtro = "";
+        this.filtroFecha = "";
+        this.paginaActual = 0;
+        return this.obtenerPedidos();
+    }
 
-        async cargarMesas() {
-            try {
-                this.mesasDisponibles = await getTables();
-            } catch (error) {
-                console.error('Error cargando mesas:', error);
-                throw error;
-            }
-        },
+    this.cargando = true;
+    try {
+        const data = await getOrdersByStatus(this.filtroEstado);
+        this.todosLosResultadosFiltrados = Array.isArray(data) ? data : (data.content || []);
+        
+        this.filtroActivo = 'estado';
+        this.filtro = "";
+        this.filtroFecha = "";
+        this.paginaActual = 0;
+        
+        await this.obtenerPedidos();
+        
+        if (this.todosLosResultadosFiltrados.length === 0) {
+            mostrarAlerta("No se encontraron pedidos con ese estado", "info");
+        }
+    } catch (error) {
+        console.error("Error filtrando por estado:", error);
+        mostrarAlerta("Error al filtrar por estado", "danger");
+        this.pedidos = [];
+        this.pedidosFiltrados = [];
+        this.todosLosResultadosFiltrados = [];
+    } finally {
+        this.cargando = false;
+    }
+},
 
-        async verDetalle(pedido) {
-            this.pedidoSeleccionado = { ...pedido };
-            await nextTick();
-            this.modalDetalle.show();
-        },
+async filtrarPorFecha() {
+    if (!this.filtroFecha) {
+        this.filtroActivo = null;
+        this.todosLosResultadosFiltrados = [];
+        this.filtro = "";
+        this.filtroEstado = "0";
+        this.paginaActual = 0;
+        return this.obtenerPedidos();
+    }
+
+    // Validar que la fecha esté completa (formato: YYYY-MM-DD = 10 caracteres)
+    if (this.filtroFecha.length !== 10) {
+        return; // No hacer nada si la fecha no está completa
+    }
+
+    this.cargando = true;
+    try {
+        const fechaFormateada = `${this.filtroFecha}T00:00:00`;
+        const data = await getOrdersByDate(fechaFormateada);
+        this.todosLosResultadosFiltrados = Array.isArray(data) ? data : (data.content || []);
+        
+        this.filtroActivo = 'fecha';
+        this.filtro = "";
+        this.filtroEstado = "0";
+        this.paginaActual = 0;
+        
+        await this.obtenerPedidos();
+        
+        if (this.todosLosResultadosFiltrados.length === 0) {
+            mostrarAlerta("No se encontraron pedidos para esa fecha", "info");
+        }
+    } catch (error) {
+        console.error("Error filtrando por fecha:", error);
+        mostrarAlerta("Error al filtrar por fecha", "danger");
+        this.pedidos = [];
+        this.pedidosFiltrados = [];
+        this.todosLosResultadosFiltrados = [];
+    } finally {
+        this.cargando = false;
+    }
+},
+
+// PASO 6: REEMPLAZA limpiarFiltros()
+async limpiarFiltros() {
+    this.filtro = "";
+    this.filtroEstado = "0";
+    this.filtroFecha = "";
+    this.filtroActivo = null;
+    this.todosLosResultadosFiltrados = [];
+    this.paginaActual = 0;
+    
+    await this.obtenerPedidos();
+    mostrarAlerta("Filtros limpiados", "success");
+},
+
+// PASO 7: REEMPLAZA cambiarPagina()
+cambiarPagina(nuevaPagina) {
+    if (nuevaPagina >= 0 && nuevaPagina < this.totalPaginas) {
+        this.paginaActual = nuevaPagina;
+        this.obtenerPedidos();
+    }
+},
 
         async eliminarPedido(id) {
             try {
@@ -506,12 +653,11 @@ export default {
                 if (confirmado) {
                     await deleteOrder(id);
                     this.pedidos = this.pedidos.filter(p => p.id !== id);
-                    this.pedidosOriginales = this.pedidosOriginales.filter(p => p.id !== id);
                     mostrarAlerta("Pedido eliminado", "success");
-                    this.actualizarListaPedidos();
+                    this.obtenerPedidos();
                 }
             } catch (error) {
-                console.error('Error eliminando pedido:', error);
+                console.error("Error eliminando pedido:", error);
                 mostrarAlerta("Error al eliminar el pedido", "danger");
             }
         },
@@ -525,7 +671,6 @@ export default {
 
             await this.recalcularTodosSubtotales();
             this.busquedaCliente = this.pedidoSeleccionado.customer?.name || "";
-
             await nextTick();
             this.modalEditar.show();
         },
@@ -534,52 +679,55 @@ export default {
             if (!this.validarPedido(this.pedidoSeleccionado)) return;
 
             try {
-                this.recalcularTotal();
-
                 const payload = this.prepararPayload(this.pedidoSeleccionado);
-                const pedidoActualizado = await updateOrder(this.pedidoSeleccionado.id, payload);
-
-                this.actualizarPedidoEnLista(pedidoActualizado);
-
+                await updateOrder(this.pedidoSeleccionado.id, payload);
                 mostrarAlerta("Pedido actualizado correctamente", "success");
                 this.modalEditar.hide();
-                this.actualizarListaPedidos();
+                this.obtenerPedidos();
             } catch (error) {
-                console.error('Error guardando cambios:', error);
+                console.error("Error guardando cambios:", error);
                 mostrarAlerta("Error al actualizar el pedido", "danger");
             }
         },
 
-        aplicarFiltros() {
-            this.pedidos = this.pedidosOriginales.filter(p => {
-                const coincideCliente = !this.filtro.trim() ||
-                    (p.customer?.name || "").toLowerCase().includes(this.filtro.toLowerCase());
-                const coincideEstado = this.filtroEstado === "0" || p.status === this.filtroEstado;
-                const coincideFecha = !this.filtroFecha || (p.date || "").startsWith(this.filtroFecha);
-                return coincideCliente && coincideEstado && coincideFecha;
-            });
+        async nuevoPedido() {
+            this.pedidoNuevo = {
+                customer: null,
+                table: { id: this.mesasDisponibles[0]?.id || null },
+                status: "PENDING",
+                orderDetails: [],
+                total: 0,
+            };
+            this.busquedaCliente = "";
+            await nextTick();
+            this.modalNuevo.show();
         },
 
-        async filtrarBusqueda() {
-            if (this.timeoutFiltro) clearTimeout(this.timeoutFiltro);
-            this.timeoutFiltro = setTimeout(() => this.aplicarFiltros(), 300);
+        async guardarNuevoPedido() {
+            if (!this.validarPedido(this.pedidoNuevo)) return;
+
+            try {
+                const payload = this.prepararPayload(this.pedidoNuevo);
+                await createOrder(payload);
+                mostrarAlerta("Pedido creado correctamente", "success");
+                this.modalNuevo.hide();
+                this.obtenerPedidos();
+            } catch (error) {
+                console.error("Error creando pedido:", error);
+                mostrarAlerta("Error al crear el pedido", "danger");
+            }
         },
 
-        async filtrarPorEstado() {
-            if (this.timeoutFiltro) clearTimeout(this.timeoutFiltro);
-            this.timeoutFiltro = setTimeout(() => this.aplicarFiltros(), 300);
+        seleccionarClienteNuevo(cliente) {
+            if (!this.pedidoNuevo) return;
+            this.pedidoNuevo.customer = { id: cliente.id, name: cliente.name };
+            this.busquedaCliente = cliente.name;
+            this.resultadosCliente = [];
         },
-
-        async filtrarPorFecha() {
-            if (this.timeoutFiltro) clearTimeout(this.timeoutFiltro);
-            this.timeoutFiltro = setTimeout(() => this.aplicarFiltros(), 300);
-        },
-
-        async limpiarFiltros() {
-            this.filtro = "";
-            this.filtroEstado = "0";
-            this.filtroFecha = "";
-            this.pedidos = [...this.pedidosOriginales];
+        async verDetalle(pedido) {
+            this.pedidoSeleccionado = { ...pedido };
+            await nextTick();
+            this.modalDetalle.show();
         },
 
         validarPedido(pedido) {
@@ -601,27 +749,63 @@ export default {
                 status: pedido.status,
                 orderDetails: pedido.orderDetails.map(d => ({
                     product: { id: d.product.id },
-                    quantity: d.quantity
+                    quantity: d.quantity,
                 })),
                 invoice: {
                     status: this.invoice.status,
-                    paymentMethod: {
-                        id: this.invoice.paymentMethodId
-                    }
-                }
+                    paymentMethod: { id: this.invoice.paymentMethodId },
+                },
             };
         },
 
-        actualizarPedidoEnLista(pedidoActualizado) {
-            const index = this.pedidos.findIndex(p => p.id === pedidoActualizado.id);
-            if (index !== -1) {
-                this.pedidos[index] = { ...pedidoActualizado };
-                this.pedidosOriginales[index] = { ...pedidoActualizado };
+        async cargarMetodos() {
+            try {
+                this.metodos = await getPayments();
+            } catch {
+                mostrarAlerta("Error al cargar los métodos de pago", "danger");
             }
         },
 
-        agregarProducto(contexto = 'editar') {
-            const pedido = contexto === 'nuevo' ? this.pedidoNuevo : this.pedidoSeleccionado;
+        async cargarProductos() {
+            try {
+                this.productosDisponibles = await getProducts();
+            } catch (error) {
+                console.error("Error cargando productos:", error);
+            }
+        },
+
+        async cargarMesas() {
+            try {
+                this.mesasDisponibles = await getTables();
+            } catch (error) {
+                console.error("Error cargando mesas:", error);
+            }
+        },
+
+        async buscarClientes() {
+            if (!this.busquedaCliente.trim() || this.busquedaCliente.length < 2) {
+                this.resultadosCliente = [];
+                return;
+            }
+
+            try {
+                this.resultadosCliente = await searchUsers(this.busquedaCliente);
+            } catch (error) {
+                console.error("Error buscando clientes:", error);
+                mostrarAlerta("Error al buscar clientes", "danger");
+            }
+        },
+
+        seleccionarCliente(cliente, contexto = "editar") {
+            const pedido = contexto === "nuevo" ? this.pedidoNuevo : this.pedidoSeleccionado;
+            if (!pedido) return;
+            pedido.customer = { id: cliente.id, name: cliente.name };
+            this.busquedaCliente = cliente.name;
+            this.resultadosCliente = [];
+        },
+
+        agregarProducto(contexto = "editar") {
+            const pedido = contexto === "nuevo" ? this.pedidoNuevo : this.pedidoSeleccionado;
             if (!pedido || !this.productosDisponibles.length) return;
 
             const producto = this.productosDisponibles[0];
@@ -631,21 +815,21 @@ export default {
                 id: Date.now(),
                 product: { ...producto },
                 quantity: 1,
-                subtotal: (producto.price || 0) * 1,
+                subtotal: producto.price || 0,
             });
 
             this.recalcularTotalContexto(contexto);
         },
 
-        async eliminarProducto(index, contexto = 'editar') {
-            const pedido = contexto === 'nuevo' ? this.pedidoNuevo : this.pedidoSeleccionado;
+        async eliminarProducto(index, contexto = "editar") {
+            const pedido = contexto === "nuevo" ? this.pedidoNuevo : this.pedidoSeleccionado;
             if (!pedido?.orderDetails) return;
 
             pedido.orderDetails.splice(index, 1);
             await this.recalcularTotalContexto(contexto);
         },
 
-        async actualizarProducto(detalle, contexto = 'editar') {
+        async actualizarProducto(detalle, contexto = "editar") {
             const prod = this.productosDisponibles.find(p => p.id === detalle.product.id);
             if (prod) {
                 detalle.product = { ...prod };
@@ -653,7 +837,7 @@ export default {
             }
         },
 
-        async recalcularSubtotal(detalle, contexto = 'editar') {
+        async recalcularSubtotal(detalle, contexto = "editar") {
             const precio = detalle.product?.price || 0;
             const cantidad = detalle.quantity || 0;
             detalle.subtotal = precio * cantidad;
@@ -673,100 +857,24 @@ export default {
 
         recalcularTotal() {
             if (!this.pedidoSeleccionado?.orderDetails) return;
-
             this.pedidoSeleccionado.total = this.pedidoSeleccionado.orderDetails.reduce(
                 (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
                 0
             );
         },
 
-        async recalcularTotalContexto(contexto = 'editar') {
-            const pedido = contexto === 'nuevo' ? this.pedidoNuevo : this.pedidoSeleccionado;
+        async recalcularTotalContexto(contexto = "editar") {
+            const pedido = contexto === "nuevo" ? this.pedidoNuevo : this.pedidoSeleccionado;
             if (!pedido?.orderDetails) return;
-
             await nextTick();
-
             pedido.total = pedido.orderDetails.reduce(
                 (sum, d) => sum + (d.subtotal || (d.quantity * (d.product?.price || 0))),
                 0
             );
         },
 
-        async nuevoPedido() {
-            this.pedidoNuevo = {
-                customer: null,
-                table: { id: this.mesasDisponibles[0]?.id || null },
-                status: "PENDING",
-                orderDetails: [],
-                total: 0,
-            };
-            this.busquedaCliente = "";
-            this.resultadosCliente = [];
-
-            await nextTick();
-            this.modalNuevo.show();
-        },
-
-        async guardarNuevoPedido() {
-            if (!this.validarPedido(this.pedidoNuevo)) return;
-
-            try {
-                await this.recalcularTotalContexto('nuevo');
-
-                const payload = this.prepararPayload(this.pedidoNuevo);
-                const nuevoPedido = await createOrder(payload);
-
-                this.pedidos.push(nuevoPedido);
-                this.pedidosOriginales.push(nuevoPedido);
-
-                mostrarAlerta("Pedido creado correctamente", "success");
-                this.modalNuevo.hide();
-                this.actualizarListaPedidos();
-
-                setTimeout(() => {
-                    this.pedidoNuevo = null;
-                }, 500);
-
-            } catch (error) {
-                console.error('Error creando pedido:', error);
-                mostrarAlerta("Error al crear el pedido", "danger");
-            }
-        },
-
-        seleccionarClienteNuevo(cliente) {
-            if (!this.pedidoNuevo) return;
-            this.pedidoNuevo.customer = { id: cliente.id, name: cliente.name };
-            this.busquedaCliente = cliente.name;
-            this.resultadosCliente = [];
-        },
-
-        async buscarClientes() {
-            if (this.timeoutBusqueda) clearTimeout(this.timeoutBusqueda);
-
-            if (!this.busquedaCliente.trim() || this.busquedaCliente.length < 2) {
-                this.resultadosCliente = [];
-                return;
-            }
-
-            this.timeoutBusqueda = setTimeout(async () => {
-                try {
-                    this.resultadosCliente = await searchUsers(this.busquedaCliente);
-                } catch (error) {
-                    console.error('Error buscando clientes:', error);
-                    mostrarAlerta("Error al buscar clientes", "danger");
-                }
-            }, 500);
-        },
-
-        seleccionarCliente(cliente) {
-            if (!this.pedidoSeleccionado) return;
-            this.pedidoSeleccionado.customer = { id: cliente.id, name: cliente.name };
-            this.busquedaCliente = cliente.name;
-            this.resultadosCliente = [];
-        },
-
         formatDate(date) {
-            return new Date(date).toLocaleString();
+            return new Date(date).toLocaleDateString();
         },
 
         badgeClass(status) {
@@ -780,11 +888,16 @@ export default {
 
         traducirEstado(status) {
             switch (status) {
-                case "PENDING": return "Pendiente";
-                case "IN_PROGRESS": return "En proceso";
-                case "COMPLETED": return "Completado";
-                case "CANCELLED": return "Cancelado";
-                default: return status;
+                case "PENDING":
+                    return "Pendiente";
+                case "IN_PROGRESS":
+                    return "En proceso";
+                case "COMPLETED":
+                    return "Completado";
+                case "CANCELLED":
+                    return "Cancelado";
+                default:
+                    return status;
             }
         },
     },
@@ -956,17 +1069,41 @@ export default {
     overflow: hidden;
 }
 
-/* Loading spinner */
-.loading-spinner {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text-light);
+/* === SPINNER CORPORATIVO === */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
 }
 
-.loading-spinner .spinner-border {
-    width: 3rem;
-    height: 3rem;
-    margin-bottom: 1rem;
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(108, 27, 0, 0.2);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-overlay p {
+    font-size: 1.1rem;
+    color: #444;
+    margin-top: 1rem;
 }
 
 /* Filas de pedidos */
@@ -1120,5 +1257,74 @@ export default {
     background: linear-gradient(135deg, #0b5ed7, #084298);
     box-shadow: 0 6px 14px rgba(13, 110, 253, 0.4);
     transform: translateY(-2px);
+}
+
+/* === PAGINACIÓN GLOBAL === */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.pagination .page-link {
+    color: #333;
+    border-radius: 8px;
+    margin: 0 4px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(88, 14, 0, 0.2);
+}
+
+/* 🔹 Página activa con color corporativo */
+.pagination .active .page-link {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+}
+
+.pagination .disabled .page-link {
+    background-color: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* === BOTONES PERSONALIZADOS (compatibles con otras vistas) === */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.pagination-container .btn-pagination {
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination-container .btn-pagination:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.pagination-container .btn-pagination:hover:not(:disabled) {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
 }
 </style>

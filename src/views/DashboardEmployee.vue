@@ -8,6 +8,11 @@
     <div v-if="isEmployee" class="dashboard-container">
       <!-- Sidebar -->
       <aside class="dashboard-sidebar">
+        <!-- Logo del restaurante -->
+        <div class="sidebar-logo">
+          <img src="../assets/logo_smash_order.png" alt="Logo del Restaurante" class="logo-img" />
+        </div>
+
         <nav>
           <ul>
             <li>
@@ -94,7 +99,7 @@ import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
 import { countAllOrders } from "@/services/orders";
 import { countAllProducts } from "@/services/products";
 import { countAvailableTables } from "@/services/tables";
-import { countActiveReservationsByCustome } from "@/services/reservation";
+import { countActiveReservationsByCustomer } from "@/services/reservation";
 
 export default {
   name: "EmployeeDashboardLayout",
@@ -109,62 +114,33 @@ export default {
       mesasCount: 0,
       reservasCount: 0,
       intervalId: null,
-      customerId: user.id || null  // 🔹 id del cliente para reservas
+      customerId: user.id || null
     };
   },
   computed: {
-    activeRole() {
-      return localStorage.getItem("activeRole") || "ROLE_EMPLOYEE";
-    },
-    isEmployee() {
-      return this.activeRole === "ROLE_EMPLOYEE";
-    }
+    activeRole() { return localStorage.getItem("activeRole") || "ROLE_EMPLOYEE"; },
+    isEmployee() { return this.activeRole === "ROLE_EMPLOYEE"; }
   },
   methods: {
     cambiarRol() {
       localStorage.removeItem("activeRole");
       this.$router.push("/select-role");
     },
-
-    async cargarPedidosCount() {
-      try { this.pedidosCount = await countAllOrders(); } 
-      catch (error) { console.error("Error al cargar pedidos:", error); }
-    },
-
-    async cargarProductosCount() {
-      try { this.productosCount = await countAllProducts(); } 
-      catch (error) { console.error("Error al cargar productos:", error); }
-    },
-
-    async cargarMesasCount() {
-      try { this.mesasCount = await countAvailableTables(); }
-      catch (error) { console.error("Error al cargar mesas:", error); }
-    },
-
-    async cargarReservasCount() {
-      try { 
+    async cargarDatos() {
+      try {
+        this.productosCount = await countAllProducts();
+        this.pedidosCount = await countAllOrders();
+        this.mesasCount = await countAvailableTables();
         if (this.customerId) {
-          this.reservasCount = await countActiveReservationsByCustome(this.customerId);
+          this.reservasCount = await countActiveReservationsByCustomer(this.customerId);
         } else {
           this.reservasCount = 0;
         }
-      } catch (error) { 
-        console.error("Error al cargar reservas:", error); 
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
       }
     },
-
-    async cargarDatos() {
-      await Promise.all([
-        this.cargarProductosCount(),
-        this.cargarPedidosCount(),
-        this.cargarMesasCount(),
-        this.cargarReservasCount()
-      ]);
-    },
-
-    iniciarAutoRefresh() {
-      this.intervalId = setInterval(this.cargarDatos, 5000);
-    }
+    iniciarAutoRefresh() { this.intervalId = setInterval(this.cargarDatos, 5000); }
   },
   mounted() {
     if (!this.isEmployee) { this.$router.push("/select-role"); return; }
@@ -177,7 +153,6 @@ export default {
 };
 </script>
 
-
 <style scoped>
 .dashboard-container {
   display: flex;
@@ -185,23 +160,47 @@ export default {
   background: #f5f5f5;
 }
 
+/* --- SIDEBAR --- */
 .dashboard-sidebar {
   width: 200px;
   background: #580e00;
   color: white;
   padding: 1rem;
   flex-shrink: 0;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Logo */
+.sidebar-logo {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo-img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: white;
+  padding: 6px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.logo-img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(255,255,255,0.4);
 }
 
 .dashboard-sidebar ul {
   list-style: none;
   padding: 0;
+  width: 100%;
 }
 
-.dashboard-sidebar li {
-  margin-bottom: 1rem;
-}
+.dashboard-sidebar li { margin-bottom: 1rem; }
 
 .dashboard-sidebar a {
   color: white;
@@ -209,37 +208,32 @@ export default {
   font-weight: 500;
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   border-radius: 8px 0 0 8px;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .dashboard-sidebar a:hover,
 .dashboard-sidebar a.router-link-active {
   background: rgba(255, 255, 255, 0.15);
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.dashboard-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
+/* --- CONTENIDO PRINCIPAL --- */
+.dashboard-content { flex: 1; display: flex; flex-direction: column; }
 
 .dashboard-header {
   background: white;
   padding: 1rem 2rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
 }
 
-.dashboard-main {
-  flex: 1;
-  padding: 2rem;
-}
+.dashboard-main { flex: 1; padding: 2rem; }
 
+/* --- CARDS --- */
 .cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -247,121 +241,60 @@ export default {
 .summary-card {
   display: flex;
   align-items: center;
-  padding: 1rem;
-  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  border-radius: 18px;
   color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .summary-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.18);
 }
 
-.card-icon {
-  font-size: 2.5rem;
-  margin-right: 1rem;
-}
+.card-icon { font-size: 2.5rem; margin-right: 1rem; }
 
-.card-products {
-  background: #FF8C00;
-}
+.card-products { background: linear-gradient(135deg,#FF8C00,#FFB347); }
+.card-tables { background: linear-gradient(135deg,#2ECC71,#27AE60); }
+.card-orders { background: linear-gradient(135deg,#FF6B35,#FF8C42); }
+.card-reservations { background: linear-gradient(135deg,#3498DB,#2980B9); }
 
-.card-tables {
-  background: #2ECC71;
-}
+.card-info h3 { margin: 0; font-size: 1.5rem; }
+.card-info p { margin: 0; font-size: 0.9rem; opacity: 0.85; }
 
-.card-orders {
-  background: #FF6B35;
-}
-
-.card-reservations {
-  background: #3498DB;
-}
-
-.card-info h3 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.card-info p {
-  margin: 0;
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
+/* --- BOTÓN CAMBIO DE ROL --- */
 .btn-role-switch {
-  background: linear-gradient(135deg, #580e00, #7a2615);
-  color: white;
-  border: none;
-  padding: 0.5rem 1.2rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border-radius: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg,#580e00,#7a2615);
+  color:white; border:none;
+  padding:0.5rem 1.2rem; font-size:0.9rem; font-weight:600;
+  border-radius:22px; cursor:pointer; display:flex; align-items:center; gap:0.4rem;
+  box-shadow:0 5px 12px rgba(0,0,0,0.15);
   transition: all 0.3s ease;
 }
-
 .btn-role-switch:hover {
-  background: linear-gradient(135deg, #7a2615, #a8321e);
+  background: linear-gradient(135deg,#7a2615,#a8321e);
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.25);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .dashboard-container {
-    flex-direction: column;
-  }
-
+/* --- RESPONSIVE --- */
+@media (max-width:1024px) {
+  .dashboard-container { flex-direction: column; }
   .dashboard-sidebar {
-    width: 100%;
-    flex-direction: row;
-    overflow-x: auto;
-    margin-right: 0;
-    border-radius: 0;
-    padding: 0.5rem;
+    width: 100%; flex-direction: row; overflow-x:auto; padding:0.5rem; align-items:center;
   }
-
-  .dashboard-sidebar ul {
-    display: flex;
-    gap: 1rem;
-  }
-
-  .dashboard-sidebar li {
-    margin-bottom: 0;
-  }
-
-  .dashboard-main {
-    padding: 1rem;
-  }
-
-  .cards-container {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
-
-  .card-info h3 {
-    font-size: 1.2rem;
-  }
-
-  .card-info p {
-    font-size: 0.8rem;
-  }
+  .sidebar-logo { display:none; }
+  .dashboard-sidebar ul { display:flex; gap:1rem; }
+  .dashboard-sidebar li { margin-bottom:0; }
+  .dashboard-main { padding:1rem; }
+  .cards-container { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+  .card-info h3 { font-size:1.3rem; }
+  .card-info p { font-size:0.85rem; }
 }
 
-@media (max-width: 480px) {
-  .cards-container {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-sidebar a {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-  }
+@media (max-width:480px) {
+  .cards-container { grid-template-columns:1fr; }
+  .dashboard-sidebar a { padding:0.5rem; font-size:0.8rem; }
 }
 </style>

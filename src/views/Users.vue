@@ -5,6 +5,7 @@
             <h1 class="usuarios-title">Gestión de Usuarios</h1>
             <p class="usuarios-subtitle">Administra y gestiona los usuarios del sistema</p>
         </div>
+
         <!-- ACCIONES -->
         <div class="usuarios-actions card p-3 mb-4 shadow-sm">
             <div class="row g-3 align-items-center">
@@ -14,6 +15,7 @@
                         <i class="fas fa-plus-circle me-2"></i> Agregar Usuario
                     </button>
                 </div>
+
                 <!-- Búsqueda -->
                 <div class="col-md">
                     <div class="input-group">
@@ -97,6 +99,33 @@
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- PAGINACIÓN -->
+                <nav v-if="mostrarPaginacion && totalPaginas > 1" class="d-flex justify-content-center mt-4">
+                    <ul class="pagination">
+                        <!-- Botón Anterior -->
+                        <li class="page-item" :class="{ disabled: paginaActual === 0 }">
+                            <button class="page-link" @click="cambiarPagina(paginaActual - 1)">
+                                <i class="fas fa-chevron-left me-1"></i> Anterior
+                            </button>
+                        </li>
+
+                        <!-- Botones numéricos -->
+                        <li v-for="n in totalPaginas" :key="n" class="page-item"
+                            :class="{ active: paginaActual === n - 1 }">
+                            <button class="page-link" @click="cambiarPagina(n - 1)">
+                                {{ n }}
+                            </button>
+                        </li>
+
+                        <!-- Botón Siguiente -->
+                        <li class="page-item" :class="{ disabled: paginaActual >= totalPaginas - 1 }">
+                            <button class="page-link" @click="cambiarPagina(paginaActual + 1)">
+                                Siguiente <i class="fas fa-chevron-right ms-1"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         </div>
 
@@ -245,6 +274,214 @@
         </div>
     </div>
 </template>
+
+<script>
+import { mostrarAlerta, confirmar } from "@/functions.js";
+import Modal from "bootstrap/js/dist/modal";
+import {
+    getUsersPaginated,
+    getUserById,
+    getUserByEmail,
+    registerUser,
+    updateUser,
+    deleteUser
+} from "@/services/users";
+import { getRoles } from "@/services/roles";
+
+export default {
+    name: "GestionUsuarios",
+    data() {
+        return {
+            usuarios: [],
+            rolesDisponibles: [],
+            usuarioNuevo: {
+                name: "",
+                userName: "",
+                email: "",
+                password: "",
+                roles: []
+            },
+            usuarioEditado: {
+                id: 0,
+                name: "",
+                userName: "",
+                email: "",
+                password: "",
+                roles: []
+            },
+            cargando: false,
+            modalAgregar: null,
+            modalEditar: null,
+            filtro: "",
+            showPassword: false,
+            paginaActual: 0,
+            tamañoPagina: 4,
+            totalPaginas: 1,
+            mostrarPaginacion: true, // 🔹 Nueva bandera para mostrar/ocultar la paginación
+        };
+    },
+    mounted() {
+        this.modalAgregar = new Modal(document.getElementById("modalGuardarUsuario"));
+        this.modalEditar = new Modal(document.getElementById("modalEditarUsuario"));
+        this.obtenerUsuariosPaginados();
+        this.obtenerRoles();
+    },
+    methods: {
+        togglePasswordVisibility() {
+            this.showPassword = !this.showPassword;
+        },
+        validarUsuario(usuario) {
+            if (!usuario.name?.trim()) {
+                mostrarAlerta("Información inválida", "info", "Ingrese el nombre");
+                return false;
+            } else if (!usuario.userName?.trim()) {
+                mostrarAlerta("Información inválida", "info", "Ingrese el nombre de usuario");
+                return false;
+            } else if (!usuario.email?.trim()) {
+                mostrarAlerta("Información inválida", "info", "Ingrese el email");
+                return false;
+            } else if (!usuario.roles || usuario.roles.length === 0) {
+                mostrarAlerta("Información incompleta", "info", "Seleccione al menos un rol");
+                return false;
+            }
+            return true;
+        },
+
+        async obtenerUsuariosPaginados() {
+            this.cargando = true;
+            this.mostrarPaginacion = true; // 🔹 Mostrar paginación cuando se listan todos
+            try {
+                const data = await getUsersPaginated(this.paginaActual, this.tamañoPagina);
+                this.usuarios = data.content;
+                this.totalPaginas = data.totalPages;
+            } catch {
+                mostrarAlerta("Error al cargar los usuarios", "danger");
+            } finally {
+                this.cargando = false;
+            }
+        },
+
+        async cambiarPagina(nuevaPagina) {
+            if (nuevaPagina < 0 || nuevaPagina >= this.totalPaginas) return;
+            this.paginaActual = nuevaPagina;
+            this.obtenerUsuariosPaginados();
+        },
+
+        async obtenerRoles() {
+            try {
+                this.rolesDisponibles = await getRoles();
+            } catch {
+                mostrarAlerta("Error al cargar los roles", "danger");
+            }
+        },
+
+        async filtrarBusqueda() {
+            if (!this.filtro.trim()) {
+                this.mostrarPaginacion = true;
+                return this.obtenerUsuariosPaginados();
+            }
+
+            try {
+                const usuario = await getUserByEmail(this.filtro);
+                if (usuario) {
+                    this.usuarios = [usuario];
+                    this.totalPaginas = 1;
+                    this.paginaActual = 0;
+                    this.mostrarPaginacion = false; // 🔹 Oculta paginación al filtrar
+                } else {
+                    this.usuarios = [];
+                    this.mostrarPaginacion = false;
+                    mostrarAlerta("Usuario no encontrado", "warning");
+                }
+            } catch {
+                this.mostrarPaginacion = false;
+                mostrarAlerta("Error en la búsqueda", "danger");
+            }
+        },
+
+        limpiarFiltros() {
+            this.filtro = "";
+            this.mostrarPaginacion = true;
+            this.obtenerUsuariosPaginados();
+        },
+
+        async guardarUsuario() {
+            if (!this.validarUsuario(this.usuarioNuevo)) return;
+
+            try {
+                const payload = {
+                    ...this.usuarioNuevo,
+                    roles: this.usuarioNuevo.roles.map(id => {
+                        const roleObj = this.rolesDisponibles.find(r => r.id === id);
+                        return { id: roleObj.id, name: roleObj.name };
+                    })
+                };
+
+                await registerUser(payload);
+                this.usuarioNuevo = { name: "", userName: "", email: "", password: "", roles: [] };
+
+                mostrarAlerta("Usuario guardado exitosamente", "success");
+                this.obtenerUsuariosPaginados();
+                this.modalAgregar.hide();
+            } catch {
+                mostrarAlerta("Error al guardar el usuario", "danger");
+            }
+        },
+
+        async obtenerPorId(id) {
+            try {
+                const usuario = await getUserById(id);
+                this.usuarioEditado = {
+                    ...usuario,
+                    roles: usuario.roles.map(r => r.id)
+                };
+                this.modalEditar.show();
+            } catch {
+                mostrarAlerta("Error al obtener los datos para editar", "danger");
+            }
+        },
+
+        async actualizarUsuario() {
+            if (!this.validarUsuario(this.usuarioEditado)) return;
+
+            try {
+                const payload = {
+                    ...this.usuarioEditado,
+                    roles: this.usuarioEditado.roles.map(id => {
+                        const roleObj = this.rolesDisponibles.find(r => r.id === id);
+                        return { id: roleObj.id, name: roleObj.name };
+                    })
+                };
+
+                await updateUser(payload);
+                mostrarAlerta("Usuario actualizado correctamente", "success");
+                this.obtenerUsuariosPaginados();
+                this.modalEditar.hide();
+            } catch {
+                mostrarAlerta("Error al actualizar el usuario", "danger");
+            }
+        },
+
+        async eliminarUsuario(id) {
+            try {
+                const confirmado = await confirmar(
+                    "Eliminar usuario",
+                    "¿Estás seguro de eliminar este usuario?"
+                );
+                if (confirmado) {
+                    await deleteUser(id);
+                    mostrarAlerta("Eliminado", "success");
+                    this.obtenerUsuariosPaginados();
+                } else {
+                    mostrarAlerta("Operación cancelada", "info");
+                }
+            } catch {
+                mostrarAlerta("Error al eliminar el usuario", "danger");
+            }
+        }
+    }
+};
+</script>
 
 <style>
 .usuarios-header {
@@ -478,185 +715,3 @@
     }
 }
 </style>
-
-
-<script>
-import { mostrarAlerta, confirmar } from "@/functions.js";
-import Modal from "bootstrap/js/dist/modal";
-
-import {
-    getUsers,
-    getUserById,
-    getUserByEmail,
-    registerUser,
-    updateUser,
-    deleteUser
-} from "@/services/users";
-
-import { getRoles } from "@/services/roles";
-
-export default {
-    name: "GestionUsuarios",
-    data() {
-        return {
-            usuarios: [],
-            rolesDisponibles: [],
-            usuarioNuevo: {
-                name: "",
-                userName: "",
-                email: "",
-                password: "",
-                roles: []
-            },
-            usuarioEditado: {
-                id: 0,
-                name: "",
-                userName: "",
-                email: "",
-                password: "",
-                roles: []
-            },
-            cargando: false,
-            modalAgregar: null,
-            modalEditar: null,
-            filtro: "",
-            showPassword: false,
-        };
-    },
-    mounted() {
-        this.modalAgregar = new Modal(document.getElementById("modalGuardarUsuario"));
-        this.modalEditar = new Modal(document.getElementById("modalEditarUsuario"));
-        this.obtenerUsuarios();
-        this.obtenerRoles();
-    },
-    methods: {
-        togglePasswordVisibility() {
-            this.showPassword = !this.showPassword;
-        },
-        validarUsuario(usuario) {
-            if (!usuario.name?.trim()) {
-                mostrarAlerta("Información inválida", "info", "Ingrese el nombre");
-                return false;
-            } else if (!usuario.userName?.trim()) {
-                mostrarAlerta("Información inválida", "info", "Ingrese el nombre de usuario");
-                return false;
-            } else if (!usuario.email?.trim()) {
-                mostrarAlerta("Información inválida", "info", "Ingrese el email");
-                return false;
-            } else if (!usuario.roles || usuario.roles.length === 0) {
-                mostrarAlerta("Información incompleta", "info", "Seleccione al menos un rol");
-                return false;
-            }
-            return true;
-        },
-
-        async obtenerUsuarios() {
-            this.cargando = true;
-            try {
-                this.usuarios = await getUsers();
-            } catch (error) {
-                mostrarAlerta("Error al cargar los usuarios", "danger");
-            } finally {
-                this.cargando = false;
-            }
-        },
-
-        async obtenerRoles() {
-            try {
-                this.rolesDisponibles = await getRoles();
-            } catch (error) {
-                mostrarAlerta("Error al cargar los roles", "danger");
-            }
-        },
-
-        async filtrarBusqueda() {
-            if (!this.filtro.trim()) return this.obtenerUsuarios();
-            try {
-                const usuario = await getUserByEmail(this.filtro);
-                this.usuarios = usuario ? [usuario] : [];
-            } catch {
-                mostrarAlerta("Error en la búsqueda", "danger");
-            }
-        },
-
-        limpiarFiltros() {
-            this.filtro = "";
-            this.obtenerUsuarios();
-        },
-
-        async guardarUsuario() {
-            if (!this.validarUsuario(this.usuarioNuevo)) return;
-
-            try {
-                let payload = {
-                    ...this.usuarioNuevo,
-                    roles: this.usuarioNuevo.roles.map(id => {
-                        let roleObj = this.rolesDisponibles.find(r => r.id === id);
-                        return { id: roleObj.id, name: roleObj.name };
-                    })
-                };
-
-                await registerUser(payload);
-                this.usuarioNuevo = { name: "", userName: "", email: "", password: "", roles: [] };
-
-                mostrarAlerta("Usuario guardado exitosamente", "success");
-                this.obtenerUsuarios();
-                this.modalAgregar.hide();
-            } catch (error) {
-                console.error("Error al guardar:", error.response?.data || error.message);
-                mostrarAlerta("Error al guardar el usuario", "danger");
-            }
-        },
-
-        async obtenerPorId(id) {
-            try {
-                const usuario = await getUserById(id);
-                this.usuarioEditado = {
-                    ...usuario,
-                    roles: usuario.roles.map(r => r.id)
-                };
-
-                this.modalEditar.show();
-            } catch (error) {
-                mostrarAlerta("Error al obtener los datos para editar", "danger");
-            }
-        },
-
-        async actualizarUsuario() {
-            if (!this.validarUsuario(this.usuarioEditado)) return;
-            try {
-                // Reconstruimos los roles en formato {id, name} para enviar al backend
-                const payload = {
-                    ...this.usuarioEditado,
-                    roles: this.usuarioEditado.roles.map(id => {
-                        const roleObj = this.rolesDisponibles.find(r => r.id === id);
-                        return { id: roleObj.id, name: roleObj.name };
-                    })
-                };
-
-                await updateUser(payload);
-                mostrarAlerta("Usuario actualizado correctamente", "success");
-                this.obtenerUsuarios();
-                this.modalEditar.hide();
-            } catch (error) {
-                mostrarAlerta("Error al actualizar el usuario", "danger");
-            }
-        },
-
-        async eliminarUsuario(id) {
-            try {
-                const confirmado = await confirmar("Eliminar usuario", "¿Estás seguro de eliminar este usuario?");
-                if (confirmado) {
-                    await deleteUser(id);
-                    mostrarAlerta("Eliminado", "success");
-                    this.obtenerUsuarios();
-                } else {
-                    mostrarAlerta("Operación cancelada", "info");
-                }
-            } catch (error) {
-                mostrarAlerta("Error al eliminar el usuario", "danger");
-            }
-        }
-    }
-};
-</script>

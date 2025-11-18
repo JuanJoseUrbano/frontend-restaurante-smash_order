@@ -16,7 +16,12 @@
         </div>
         <div class="col-md-auto">
           <div class="input-group search-small">
-            <input type="text" class="form-control search-input" v-model="filtroRecibo" placeholder="Buscar recibo" />
+            <input
+              type="text"
+              class="form-control search-input"
+              v-model="filtroRecibo"
+              placeholder="Buscar recibo"
+            />
             <button @click="buscarPorRecibo" class="btn btn-buscar">
               <i class="fas fa-search"></i>
             </button>
@@ -44,25 +49,25 @@
 
     <!-- TABLA PAGOS -->
     <div class="pagos-table-container shadow-sm">
-      <div v-if="cargando" class="loading-spinner">
-        <div class="spinner-border text-primary" role="status">
+      <div v-if="cargando" class="loading-overlay">
+        <div class="spinner" role="status">
           <span class="visually-hidden">Cargando...</span>
         </div>
         <p>Cargando Pagos...</p>
       </div>
+
       <div v-else-if="pagos.length === 0" class="empty-state">
         <i class="fas fa-money-check-alt empty-icon"></i>
         <h4>No hay pagos registrados</h4>
         <p>Agrega un pago para empezar</p>
       </div>
+
       <div v-else class="table-responsive">
         <table class="table table-hover align-middle">
           <thead class="table-light">
             <tr>
               <th class="text-center"># Pedido</th>
               <th class="text-center">Cliente</th>
-              <th class="text-center">Mesa</th>
-              <th class="text-center">Estado Pedido</th>
               <th class="text-center">Método Pago</th>
               <th class="text-center">Monto</th>
               <th class="text-center">Fecha Pago</th>
@@ -75,18 +80,27 @@
             <tr v-for="p in pagos" :key="p.id" class="pago-row">
               <td class="text-center">{{ p.order.id }}</td>
               <td class="text-center">{{ p.order?.customer?.name }}</td>
-              <td class="text-center">Mesa {{ p.order?.table?.number }}</td>
-              <td class="text-center">{{ traducirEstadoPedido(p.order?.status) }}</td>
               <td class="text-center">{{ p.paymentMethod?.name }}</td>
               <td class="text-center">${{ p.total.toLocaleString() }}</td>
-              <td class="text-center">{{ !p.paymentDate || p.paymentDate.startsWith('1969-12-31') ? 'Sin pago' : formatDate(p.paymentDate) }}</td>
+              <td class="text-center">
+                {{ !p.paymentDate || p.paymentDate.startsWith('1969-12-31')
+                  ? 'Sin pago'
+                  : formatDate(p.paymentDate) }}
+              </td>
               <td class="text-center">{{ p.receiptNumber }}</td>
               <td class="text-center">
-                <span :class="['badge fs-6',
-                  p.status === 'PAID' ? 'bg-success' :
-                    p.status === 'PENDING' ? 'bg-warning text-dark' :
-                      p.status === 'CANCELLED' ? 'bg-danger' :
-                        'bg-secondary']">
+                <span
+                  :class="[
+                    'badge fs-6',
+                    p.status === 'PAID'
+                      ? 'bg-success'
+                      : p.status === 'PENDING'
+                      ? 'bg-warning text-dark'
+                      : p.status === 'CANCELLED'
+                      ? 'bg-danger'
+                      : 'bg-secondary'
+                  ]"
+                >
                   {{ traducirEstado(p.status) }}
                 </span>
               </td>
@@ -98,7 +112,6 @@
                   <button class="btn btn-sm btn-outline-info me-2" @click="generarPDF(p)">
                     <i class="fas fa-file-pdf"></i>
                   </button>
-
                   <button class="btn btn-sm btn-outline-danger" @click="eliminarPago(p.id)">
                     <i class="fas fa-trash-alt"></i>
                   </button>
@@ -107,6 +120,27 @@
             </tr>
           </tbody>
         </table>
+<!-- PAGINACIÓN -->
+<div class="pagination-container text-center my-4">
+  <button
+    class="btn-pagination me-2"
+    @click="cambiarPagina(paginaActual - 1)"
+    :disabled="paginaActual === 0"
+  >
+    <i class="fas fa-chevron-left"></i>
+  </button>
+  <span class="pagination-info">
+    Página <strong>{{ paginaActual + 1 }}</strong> de <strong>{{ totalPaginas }}</strong>
+  </span>
+  <button
+    class="btn-pagination ms-2"
+    @click="cambiarPagina(paginaActual + 1)"
+    :disabled="paginaActual >= totalPaginas - 1"
+  >
+    <i class="fas fa-chevron-right"></i>
+  </button>
+</div>
+
       </div>
     </div>
 
@@ -212,7 +246,7 @@
 import { mostrarAlerta, confirmar } from "@/functions.js";
 import { jsPDF } from "jspdf";
 import Modal from "bootstrap/js/dist/modal";
-import { getInvoices, getInvoiceById, createInvoice, updateInvoice, deleteInvoice } from "@/services/invoices.js";
+import { getInvoicesPaginated, getInvoiceById, createInvoice, updateInvoice, deleteInvoice } from "@/services/invoices.js";
 import { getPayments } from "@/services/paymentMethods.js";
 import { getOrdersWithoutInvoice } from "@/services/orders.js";
 
@@ -235,8 +269,13 @@ export default {
       resultadosPedido: [],
       busquedaPedidoEdit: "",
       resultadosPedidoEdit: [],
+      paginaActual: 0,
+      tamañoPagina: 5,
+      totalPaginas: 0,
+      actualizandoPagos: false
     };
   },
+
   async mounted() {
     this.modalAgregar = new Modal(this.$refs.modalAgregar);
     this.modalEditar = new Modal(this.$refs.modalEditar);
@@ -244,35 +283,167 @@ export default {
     await this.cargarMetodos();
     await this.cargarPedidos();
   },
-  methods: {
 
+  methods: {
     async obtenerPagos() {
+  this.cargando = true;
+  try {
+    let data;
+    
+    // Si hay un filtro activo, paginar desde los resultados guardados
+    if (this.filtroActivo && this.todosLosResultadosFiltrados.length > 0) {
+      const inicio = this.paginaActual * this.tamañoPagina;
+      const fin = inicio + this.tamañoPagina;
+      const paginados = this.todosLosResultadosFiltrados.slice(inicio, fin);
+      
+      data = {
+        content: paginados,
+        totalPages: Math.ceil(this.todosLosResultadosFiltrados.length / this.tamañoPagina),
+      };
+    } else if (!this.filtroActivo) {
+      // Sin filtros, paginación normal desde el backend
+      data = await getInvoicesPaginated(this.paginaActual, this.tamañoPagina);
+    } else {
+      data = { content: [], totalPages: 1 };
+    }
+    
+    this.pagos = data.content || [];
+    this.pagosOriginales = data.content || [];
+    this.totalPaginas = data.totalPages || 1;
+  } catch (error) {
+    console.error(error);
+    mostrarAlerta("Error al cargar los pagos", "danger");
+    this.pagos = [];
+    this.pagosOriginales = [];
+  } finally {
+    this.cargando = false;
+  }
+},
+
+// PASO 3: REEMPLAZA cambiarPagina()
+async cambiarPagina(nuevaPagina) {
+  if (nuevaPagina < 0 || nuevaPagina >= this.totalPaginas) return;
+  this.paginaActual = nuevaPagina;
+  await this.obtenerPagos();
+},
+
+// PASO 4: REEMPLAZA buscarPorRecibo()
+async buscarPorRecibo() {
+  if (!this.filtroRecibo.trim()) {
+    this.filtroActivo = null;
+    this.todosLosResultadosFiltrados = [];
+    this.filtroEstado = "";
+    this.paginaActual = 0;
+    return this.obtenerPagos();
+  }
+
+  this.cargando = true;
+  try {
+    // Obtener todos los pagos para filtrar localmente
+    // (asumiendo que no hay endpoint específico para buscar por recibo)
+    const data = await getInvoicesPaginated(0, 1000); // Obtener muchos registros
+    const todosLosPagos = data.content || [];
+    
+    // Filtrar por número de recibo
+    this.todosLosResultadosFiltrados = todosLosPagos.filter(p =>
+      p.receiptNumber?.toLowerCase().includes(this.filtroRecibo.toLowerCase())
+    );
+    
+    this.filtroActivo = 'recibo';
+    this.filtroEstado = "";
+    this.paginaActual = 0;
+    
+    await this.obtenerPagos();
+    
+    if (this.todosLosResultadosFiltrados.length === 0) {
+      mostrarAlerta("No se encontraron pagos con ese número de recibo", "info");
+    }
+  } catch (error) {
+    console.error("Error buscando por recibo:", error);
+    mostrarAlerta("Error al buscar por recibo", "danger");
+    this.pagos = [];
+    this.todosLosResultadosFiltrados = [];
+  } finally {
+    this.cargando = false;
+  }
+},
+
+// PASO 5: REEMPLAZA filtrarPorEstado()
+async filtrarPorEstado() {
+  if (!this.filtroEstado) {
+    this.filtroActivo = null;
+    this.todosLosResultadosFiltrados = [];
+    this.filtroRecibo = "";
+    this.paginaActual = 0;
+    return this.obtenerPagos();
+  }
+
+  this.cargando = true;
+  try {
+    // Obtener todos los pagos para filtrar localmente
+    const data = await getInvoicesPaginated(0, 1000); // Obtener muchos registros
+    const todosLosPagos = data.content || [];
+    
+    // Filtrar por estado
+    this.todosLosResultadosFiltrados = todosLosPagos.filter(p => 
+      p.status === this.filtroEstado
+    );
+    
+    this.filtroActivo = 'estado';
+    this.filtroRecibo = "";
+    this.paginaActual = 0;
+    
+    await this.obtenerPagos();
+    
+    if (this.todosLosResultadosFiltrados.length === 0) {
+      mostrarAlerta("No se encontraron pagos con ese estado", "info");
+    }
+  } catch (error) {
+    console.error("Error filtrando por estado:", error);
+    mostrarAlerta("Error al filtrar por estado", "danger");
+    this.pagos = [];
+    this.todosLosResultadosFiltrados = [];
+  } finally {
+    this.cargando = false;
+  }
+},
+
+// PASO 6: REEMPLAZA limpiarFiltros()
+async limpiarFiltros() {
+  this.filtroRecibo = "";
+  this.filtroEstado = "";
+  this.filtroActivo = null;
+  this.todosLosResultadosFiltrados = [];
+  this.paginaActual = 0;
+  
+  await this.obtenerPagos();
+  mostrarAlerta("Filtros limpiados", "success");
+},
+
+
+    async cargarMetodos() {
       this.cargando = true;
       try {
-        const data = await getInvoices();
-        this.pagosOriginales = data;
-        this.pagos = [...data];
+        this.metodos = await getPayments();
       } catch {
-        mostrarAlerta("Error al cargar los pagos", "danger");
+        mostrarAlerta("Error al cargar los métodos de pago", "danger");
       } finally {
         this.cargando = false;
       }
     },
 
-    async cargarMetodos() {
-      this.cargando = true;
-      try { this.metodos = await getPayments(); }
-      catch { mostrarAlerta("Error al cargar los métodos de pago", "danger"); }
-      finally { this.cargando = false; }
-    },
-
     async cargarPedidos() {
       this.cargando = true;
-      try { this.pedidos = await getOrdersWithoutInvoice(); }
-      catch { mostrarAlerta("Error al cargar los pedidos", "danger"); }
-      finally { this.cargando = false; }
+      try {
+        this.pedidos = await getOrdersWithoutInvoice();
+      } catch {
+        mostrarAlerta("Error al cargar los pedidos", "danger");
+      } finally {
+        this.cargando = false;
+      }
     },
 
+    // === CRUD ===
     abrirModalAgregar() {
       this.pagoNuevo = { orderId: "", paymentMethodId: "", status: "PENDING" };
       this.busquedaPedido = "";
@@ -316,11 +487,12 @@ export default {
         this.busquedaPedidoEdit = `#${p.order?.id} - ${p.order?.customer?.name} - Mesa ${p.order?.table?.number}`;
         this.resultadosPedidoEdit = [];
         this.modalEditar.show();
-      } catch { mostrarAlerta("Error al obtener el pago", "danger"); }
+      } catch {
+        mostrarAlerta("Error al obtener el pago", "danger");
+      }
     },
 
     async actualizarPago() {
-      // Validación básica de campos requeridos
       if (!this.pagoEditado.orderId || !this.pagoEditado.paymentMethodId || !this.pagoEditado.receiptNumber) {
         mostrarAlerta("Completa todos los campos", "warning");
         return;
@@ -334,16 +506,9 @@ export default {
       };
 
       try {
-        console.log("Body enviado:", body);
         await updateInvoice(this.pagoEditado.id, body);
-
-
         mostrarAlerta("Pago actualizado correctamente", "success");
-
-        // Actualiza la lista en segundo plano sin duplicar llamadas
         await this.actualizarListaPagos();
-
-        // Cierra el modal después de actualizar
         this.modalEditar.hide();
       } catch (error) {
         console.error("Error al actualizar el pago:", error);
@@ -352,20 +517,13 @@ export default {
     },
 
     async actualizarListaPagos() {
-      if (this.actualizandoPagos) return; // Previene ejecuciones múltiples simultáneas
-
+      if (this.actualizandoPagos) return;
       this.actualizandoPagos = true;
       try {
-        // Obtiene los pagos actualizados desde el backend
         await this.obtenerPagos();
-
-        // Aplica filtros si el usuario está filtrando por estado o método
-        if (typeof this.aplicarFiltros === "function") {
-          this.aplicarFiltros();
-        }
+        if (typeof this.aplicarFiltros === "function") this.aplicarFiltros();
       } catch (error) {
         console.error("Error actualizando la lista de pagos:", error);
-        mostrarAlerta("No se pudo actualizar la lista de pagos", "danger");
       } finally {
         this.actualizandoPagos = false;
       }
@@ -379,60 +537,47 @@ export default {
           mostrarAlerta("Pago eliminado correctamente", "success");
           await this.obtenerPagos();
         }
-      } catch { mostrarAlerta("Error al eliminar el pago", "danger"); }
+      } catch {
+        mostrarAlerta("Error al eliminar el pago", "danger");
+      }
     },
+
+    // === PDF ===
     generarPDF(pago) {
       const doc = new jsPDF();
-
       const img = new Image();
       img.src = require("../assets/logo_smash_order.png");
       img.onload = () => {
-        doc.addImage(img, 'PNG', 20, 10, 40, 20);
-
+        doc.addImage(img, "PNG", 20, 10, 40, 20);
         doc.setTextColor("#580e00");
         doc.setFontSize(20);
         doc.setFont("helvetica", "bold");
         doc.text("Comprobante de Pago", 105, 40, null, null, "center");
 
         doc.setDrawColor("#580e00");
-        doc.setLineWidth(0.5);
         doc.line(20, 45, 190, 45);
 
         doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
         doc.setTextColor(0, 0, 0);
         doc.text(`# Pedido: ${pago.order.id}`, 20, 55);
         doc.text(`Cliente: ${pago.order?.customer?.name || "-"}`, 20, 65);
         doc.text(`Mesa: ${pago.order?.table?.number || "-"}`, 20, 75);
         doc.text(`Estado Pedido: ${this.traducirEstadoPedido(pago.order?.status)}`, 20, 85);
-
         doc.text(`Método de Pago: ${pago.paymentMethod?.name || "-"}`, 20, 105);
         doc.text(`Monto: $${pago.total.toLocaleString()}`, 20, 115);
         doc.text(`Fecha Pago: ${this.formatDate(pago.paymentDate)}`, 20, 125);
         doc.text(`Número de Recibo: ${pago.receiptNumber}`, 20, 135);
         doc.text(`Estado Pago: ${this.traducirEstado(pago.status)}`, 20, 145);
 
-        doc.setDrawColor("#580e00");
-        doc.line(20, 150, 190, 150);
-
-        doc.setFontSize(10);
         doc.setTextColor("#580e00");
+        doc.setFontSize(10);
         doc.text("Gracias por tu compra. Smash Order", 105, 160, null, null, "center");
-
         doc.save(`comprobante_pago_${pago.receiptNumber}.pdf`);
       };
     },
 
-    buscarPorRecibo() { this.aplicarFiltros(); },
-    filtrarPorEstado() { this.aplicarFiltros(); },
-    limpiarFiltros() { this.filtroRecibo = ""; this.filtroEstado = ""; this.pagos = [...this.pagosOriginales]; },
-    aplicarFiltros() {
-      let filtrados = [...this.pagosOriginales];
-      if (this.filtroRecibo) filtrados = filtrados.filter(p => p.receiptNumber.toLowerCase().includes(this.filtroRecibo.toLowerCase()));
-      if (this.filtroEstado) filtrados = filtrados.filter(p => p.status === this.filtroEstado);
-      this.pagos = filtrados;
-    },
-
+    
+    // === PEDIDOS ===
     filtrarPedidos() {
       const busq = this.busquedaPedido.toLowerCase();
       this.resultadosPedido = this.pedidos.filter(p =>
@@ -445,7 +590,6 @@ export default {
       this.busquedaPedido = `#${pedido.id} - ${pedido.customer?.name} - Mesa ${pedido.table?.number}`;
       this.resultadosPedido = [];
     },
-
     filtrarPedidosEdit() {
       const busq = this.busquedaPedidoEdit.toLowerCase();
       this.resultadosPedidoEdit = this.pedidos.filter(p =>
@@ -459,6 +603,7 @@ export default {
       this.resultadosPedidoEdit = [];
     },
 
+    // === UTILIDADES ===
     traducirEstado(estado) {
       if (estado === "PAID") return "Pagado";
       if (estado === "PENDING") return "Pendiente";
@@ -467,10 +612,10 @@ export default {
       return estado;
     },
     traducirEstadoPedido(estado) {
-      if (estado === "PENDING") return "Pendiente";
-      if (estado === "IN_PROGRESS") return "En progreso";
       if (estado === "COMPLETED") return "Completado";
+      if (estado === "PENDING") return "Pendiente";
       if (estado === "CANCELLED") return "Cancelado";
+      if (estado === "IN_PROGRESS") return "En proceso";
       return estado;
     },
     formatDate(fecha) {
@@ -480,21 +625,28 @@ export default {
 };
 </script>
 
+
 <style>
+.pagos-container {
+  padding: 1.5rem 2rem;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
 .pagos-header {
   text-align: center;
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
+  padding: 2rem 1rem;
+  background: linear-gradient(90deg, #fff, #f7f3f2);
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(88, 14, 0, 0.12);
 }
 
 .pagos-title {
-  color: var(--primary-color);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  font-size: 2.2rem;
+  color: #580e00;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
+  font-size: 2.4rem;
+  letter-spacing: 0.5px;
 }
 
 .pagos-subtitle {
@@ -503,128 +655,252 @@ export default {
   margin: 0;
 }
 
-.btn-custom {
-  border: none;
-  font-weight: 600;
-  border-radius: 8px;
-  padding: 0.6rem 1.2rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.pagos-actions {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  padding: 1.2rem 1.8rem !important;
+  margin-bottom: 2rem;
 }
 
-.btn-agregar {
-  background-color: var(--primary-color, #e63946);
+.btn-guardar {
+  background: #580e00;
   color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+  padding: 0.65rem 1.3rem;
 }
 
-.btn-agregar:hover {
-  background-color: var(--primary-dark, #c62828);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+.btn-guardar:hover {
+  background: #761f11;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(88, 14, 0, 0.25);
 }
 
 .btn-buscar {
-  background-color: var(--secondary-color, #4caf50);
-  color: #fff;
-  padding: 0.55rem 1rem;
+  background: #580e00;
+  color: white;
+  border: none;
+  transition: all 0.2s ease;
   border-radius: 0 8px 8px 0;
 }
 
 .btn-buscar:hover {
-  background-color: #3e8e41;
-}
-
-.btn-limpiar {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.btn-limpiar:hover {
-  background-color: #e0e0e0;
-}
-
-/* Estilos búsqueda */
-.search-container {
-  display: flex;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  background: #761f11;
 }
 
 .search-input {
-  flex: 1;
-  padding: 0.55rem 1rem;
-  border: 1px solid #ccc;
-  border-right: none;
   border-radius: 8px 0 0 8px;
+  border: 1px solid #ddd;
+  box-shadow: none;
+  transition: border 0.2s ease;
 }
 
-/* Modal personalizado */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1050;
+.search-input:focus {
+  border-color: #580e00;
 }
 
-.modal-custom {
+.state-select {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  transition: border 0.2s ease;
+}
+
+.state-select:focus {
+  border-color: #580e00;
+  box-shadow: none;
+}
+
+.pagos-table-container {
   background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 100%;
-}
-
-.categorias-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  border-radius: 14px;
   padding: 1.5rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-.categorias-title {
-  color: var(--primary-color, #e63946);
+.table {
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.table thead {
+  background: #faf7f7;
+  border-bottom: 2px solid #ddd;
+}
+
+.table thead th {
+  color: #580e00;
   font-weight: 700;
-  margin-bottom: 0.5rem;
-  font-size: 2.2rem;
+  text-transform: uppercase;
+  font-size: 0.9rem;
 }
 
-.categorias-subtitle {
-  color: var(--text-light, #777);
-  font-size: 1.1rem;
-  margin-bottom: 1rem;
+.table tbody tr {
+  background: #fff;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 
-.categorias-actions {
-  margin-top: 1.5rem;
+.table tbody tr:hover {
+  background: #fff8f6;
+  transform: scale(1.005);
 }
 
-.categorias-table-container {
-  background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
-  overflow: hidden;
+.table td {
+  vertical-align: middle;
+  padding: 0.9rem;
+  border-top: none;
 }
 
 .action-buttons .btn {
   border-radius: 6px;
-  padding: 0.4rem 0.8rem;
-  transition: all 0.2s ease;
+  padding: 0.45rem 0.75rem;
+  transition: all 0.25s ease;
 }
 
 .action-buttons .btn:hover {
   transform: translateY(-2px);
 }
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 3.5rem;
+  color: #580e00;
+  margin-bottom: 1rem;
+}
+/* === SPINNER DE CARGA === */
+.loading-overlay {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  border-bottom: none;
+}
+
+.modal-footer {
+  border-top: none;
+}
+
+.modal-body label {
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  transition: border 0.2s ease;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+  border-color: #580e00;
+  box-shadow: none;
+}
+
+.list-group-item-action {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.list-group-item-action:hover {
+  background: #fff3ef;
+}
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #c1b0ad;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #a58a86;
+}
+/* === PAGINACIÓN CORPORATIVA === */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  padding: 0.9rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.08);
+  max-width: 340px;
+  margin: 2rem auto;
+  transition: all 0.3s ease;
+}
+
+.btn-pagination {
+  background: #580e00;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(88, 14, 0, 0.2);
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #761f11;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.25);
+}
+
+.btn-pagination:disabled {
+  background: #d3c5c3;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pagination-info {
+  color: #580e00;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+}
+
 </style>

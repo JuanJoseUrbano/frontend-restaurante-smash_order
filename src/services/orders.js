@@ -10,6 +10,13 @@ export async function getOrders() {
   return response.data;
 }
 
+export async function getOrdersPaginated(page = 0, size = 3) {
+  const res = await api.get("/orders/paginated", {
+    params: { page, size },
+  });
+  return res.data;
+}
+
 export async function getOrdersWithoutInvoice() {
   const response = await api.get("orders/without-invoice");
   return response.data;
@@ -30,9 +37,13 @@ export async function deleteOrder(id) {
   return response.data;
 }
 
-// 🔍 Filtros adicionales
 export async function getOrdersByCustomer(customerId) {
   const response = await api.get(`/orders/customer/${customerId}`);
+  return response.data;
+}
+
+export async function getOrdersByCustomerName (name) {
+  const response = await api.get('/orders/search-by-customer', { params: { name } });
   return response.data;
 }
 
@@ -42,7 +53,7 @@ export async function getOrdersByStatus(status) {
 }
 
 export async function getOrdersByDate(date) {
-  const response = await api.get(`/orders/date/${date}`);
+  const response = await api.get('/orders/date', { params: { date } });
   return response.data;
 }
 

@@ -8,6 +8,10 @@
 
     <div v-if="isAdminOrEmployee" class="dashboard-container">
       <aside class="dashboard-sidebar">
+        <div class="sidebar-logo">
+          <img src="../assets/logo_smash_order.png" alt="Logo del Restaurante" class="logo-img" />
+        </div>
+
         <nav>
           <ul>
             <li>
@@ -182,8 +186,6 @@ export default {
 };
 </script>
 
-
-
 <style scoped>
 .dashboard-container {
   display: flex;
@@ -191,18 +193,53 @@ export default {
   background: #f5f5f5;
 }
 
+/* --- SIDEBAR --- */
 .dashboard-sidebar {
-  width: 180px;
+  width: 200px;
   background: #580e00;
   color: white;
   padding: 1rem;
   flex-shrink: 0;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Logo */
+.sidebar-logo {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.logo-img {
+  width: 110px; /* antes 70px */
+  height: 110px; /* antes 70px */
+  object-fit: contain;
+  border-radius: 50%;
+  background: white;
+  padding: 6px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.logo-img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+
+.logo-title {
+  margin-top: 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
 }
 
 .dashboard-sidebar ul {
   list-style: none;
   padding: 0;
+  width: 100%;
 }
 
 .dashboard-sidebar li {
@@ -216,7 +253,7 @@ export default {
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-radius: 8px 0 0 8px;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
@@ -227,6 +264,7 @@ export default {
   text-decoration: none;
 }
 
+/* --- CONTENIDO --- */
 .dashboard-content {
   flex: 1;
   display: flex;
@@ -244,7 +282,7 @@ export default {
   padding: 2rem;
 }
 
-/* Cards resumen */
+/* --- TARJETAS --- */
 .cards-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -300,6 +338,7 @@ export default {
   opacity: 0.8;
 }
 
+/* --- BOTÓN CAMBIO DE ROL --- */
 .btn-role-switch {
   background: linear-gradient(135deg, #580e00, #7a2615);
   color: white;
@@ -322,10 +361,7 @@ export default {
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
 }
 
-.btn-role-switch i {
-  font-size: 1rem;
-}
-
+/* --- RESPONSIVE --- */
 @media (max-width: 1024px) {
   .dashboard-container {
     flex-direction: column;
@@ -335,45 +371,16 @@ export default {
     width: 100%;
     flex-direction: row;
     overflow-x: auto;
-    margin-right: 0;
-    border-radius: 0;
     padding: 0.5rem;
+  }
+
+  .sidebar-logo {
+    display: none;
   }
 
   .dashboard-sidebar ul {
     display: flex;
     gap: 1rem;
-  }
-
-  .dashboard-sidebar li {
-    margin-bottom: 0;
-  }
-
-  .dashboard-main {
-    padding: 1rem;
-  }
-
-  .cards-container {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  }
-
-  .card-info h3 {
-    font-size: 1.2rem;
-  }
-
-  .card-info p {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .cards-container {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-sidebar a {
-    padding: 0.5rem;
-    font-size: 0.8rem;
   }
 }
 </style>

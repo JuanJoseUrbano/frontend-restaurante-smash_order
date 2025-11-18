@@ -20,6 +20,7 @@ import ReservationHistory from "@/views/ReservationHistory.vue";
 import Notifications from "@/views/Notifications.vue";
 import OrderHistory from "@/views/OrderHistory.vue";
 import UserProfile from "@/views/UserProfile.vue";
+import CatalogPublic from "@/views/CatalogPublic.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -27,8 +28,9 @@ const routes = [
   { path: "/about", component: AboutView },
   { path: "/login", component: Login },
   { path: "/signin", component: SignIn },
-
   { path: "/select-role", component: SelectRolePage },
+  { path: "/catalogo", component: CatalogPublic },
+  
 
   // Dashboard Admin
   {
