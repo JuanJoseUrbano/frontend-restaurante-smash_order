@@ -1,10 +1,9 @@
 <template>
   <div>
-    <!-- Header recibe el rol activo -->
     <HeaderAuthenticatedAdmin 
       :username="username" 
       :roles="roles" 
-      :active-role="activeRole"
+      :active-role="activeRole" 
     />
 
     <div v-if="isAdminOrEmployee" class="dashboard-container">
@@ -22,6 +21,11 @@
               </router-link>
             </li>
             <li>
+              <router-link to="/dashboard-admin/reservations">
+                <i class="fas fa-calendar-check me-2"></i> Reservas
+              </router-link>
+            </li>
+            <li>
               <router-link to="/dashboard-admin/products">
                 <i class="fas fa-box-open me-2"></i> Productos
               </router-link>
@@ -36,6 +40,11 @@
                 <i class="fas fa-table me-2"></i> Mesas
               </router-link>
             </li>
+            <li>
+              <router-link to="/dashboard-admin/payments">
+                <i class="fas fa-credit-card me-2"></i> Pagos
+              </router-link>
+            </li>
           </ul>
         </nav>
       </aside>
@@ -43,7 +52,6 @@
       <main class="dashboard-content">
         <header class="dashboard-header d-flex justify-content-between align-items-center">
           <h1>Bienvenido, {{ username }}</h1>
-          <!-- Botón para cambiar rol si el usuario tiene más de 1 -->
           <div v-if="roles.length > 1">
             <button class="btn-role-switch" @click="cambiarRol">
               <i class="fas fa-exchange-alt"></i> Cambiar Rol
@@ -56,28 +64,28 @@
             <div class="summary-card card-users">
               <i class="fas fa-users card-icon"></i>
               <div class="card-info">
-                <h3>125</h3>
+                <h3>{{ usersCount }}</h3>
                 <p>Usuarios registrados</p>
               </div>
             </div>
             <div class="summary-card card-products">
               <i class="fas fa-box-open card-icon"></i>
               <div class="card-info">
-                <h3>78</h3>
+                <h3>{{ productosCount }}</h3>
                 <p>Productos activos</p>
               </div>
             </div>
             <div class="summary-card card-categories">
               <i class="fas fa-tags card-icon"></i>
               <div class="card-info">
-                <h3>12</h3>
+                <h3>{{ categoriesCount }}</h3>
                 <p>Categorías</p>
               </div>
             </div>
             <div class="summary-card card-tables">
               <i class="fas fa-table card-icon"></i>
               <div class="card-info">
-                <h3>24</h3>
+                <h3>{{ mesasCount }}</h3>
                 <p>Mesas disponibles</p>
               </div>
             </div>
@@ -96,6 +104,10 @@
 
 <script>
 import HeaderAuthenticatedAdmin from '@/components/HeaderAuthenticated.vue';
+import { countAllProducts } from "@/services/products";
+import { countAvailableTables } from "@/services/tables";
+import { countAllUsers } from "@/services/users";
+import { countAllCategories } from "@/services/categories";
 
 export default {
   name: "DashboardLayout",
@@ -104,7 +116,12 @@ export default {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     return {
       username: user.userName || "Usuario",
-      roles: user.roles || []
+      roles: user.roles || [],
+      productosCount: 0,
+      mesasCount: 0,
+      usersCount: 0,
+      categoriesCount: 0,
+      intervalId: null
     };
   },
   computed: {
@@ -119,10 +136,53 @@ export default {
     cambiarRol() {
       localStorage.removeItem("activeRole");
       this.$router.push("/select-role");
+    },
+
+    async cargarProductosCount() {
+      try { this.productosCount = await countAllProducts(); } 
+      catch (error) { console.error("Error al cargar productos:", error); }
+    },
+
+    async cargarMesasCount() {
+      try { this.mesasCount = await countAvailableTables(); } 
+      catch (error) { console.error("Error al cargar mesas:", error); }
+    },
+
+    async cargarUsersCount() {
+      try { this.usersCount = await countAllUsers(); }
+      catch (error) { console.error("Error al cargar usuarios:", error); }
+    },
+
+    async cargarCategoriesCount() {
+      try { this.categoriesCount = await countAllCategories(); }
+      catch (error) { console.error("Error al cargar categorías:", error); }
+    },
+
+    async cargarDatos() {
+      await Promise.all([
+        this.cargarProductosCount(),
+        this.cargarMesasCount(),
+        this.cargarUsersCount(),
+        this.cargarCategoriesCount()
+      ]);
+    },
+
+    iniciarAutoRefresh() {
+      this.intervalId = setInterval(this.cargarDatos, 5000);
     }
+  },
+  mounted() {
+    if (!this.isAdminOrEmployee) return;
+    this.cargarDatos();
+    this.iniciarAutoRefresh();
+  },
+  beforeUnmount() {
+    if (this.intervalId) clearInterval(this.intervalId);
   }
 };
 </script>
+
+
 
 <style scoped>
 .dashboard-container {

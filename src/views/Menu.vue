@@ -6,7 +6,6 @@
   </div>
 
   <div class="catalogo-container">
-
     <!-- HEADER -->
     <div class="catalogo-header shadow-sm text-center">
       <h1 class="catalogo-title">Menú Disponible</h1>
@@ -15,34 +14,61 @@
 
     <!-- FILTROS -->
     <div class="catalogo-filtros card p-3 mb-4 shadow-sm">
-      <div class="row g-3 align-items-center">
-        <div class="col-md">
+      <div class="row g-2 align-items-center flex-wrap">
+        <!-- Buscar por nombre -->
+        <div class="col-md-5">
           <div class="input-group">
-            <input type="text" class="form-control search-input" v-model="filtro" placeholder="Buscar por nombre..." />
-            <button @click="filtrarBusqueda" class="btn btn-primary">
+            <input
+              type="text"
+              class="form-control search-input"
+              v-model="filtro"
+              placeholder="Buscar por nombre..."
+            />
+            <button @click="filtrarBusqueda" class="btn btn-buscar">
               <i class="fas fa-search"></i>
             </button>
           </div>
         </div>
 
-        <div class="col-md-auto">
-          <select class="form-select" v-model="filtroCategoria" @change="filtrarPorCategoria">
+        <!-- Categorías -->
+        <div class="col-md-3">
+          <select
+            class="form-select"
+            v-model="filtroCategoria"
+            @change="filtrarPorCategoria"
+          >
             <option value="0">Todas las categorías</option>
-            <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
+            <option v-for="c in categorias" :key="c.id" :value="c.id">
+              {{ c.name }}
+            </option>
           </select>
         </div>
 
-        <div class="col-md-auto">
-          <div class="input-group price-filter">
-            <input type="number" class="form-control input-precio" placeholder="Mín" v-model="precioMin" min="0" />
-            <input type="number" class="form-control input-precio" placeholder="Máx" v-model="precioMax" min="0" />
-            <button @click="filtrarPorPrecio" class="btn btn-success btn-precio">Filtrar</button>
-          </div>
+        <!-- Precio mínimo y máximo -->
+        <div class="col-md-2 d-flex gap-2">
+          <input
+            type="number"
+            class="form-control input-precio"
+            placeholder="Mín"
+            v-model="precioMin"
+            min="0"
+          />
+          <input
+            type="number"
+            class="form-control input-precio"
+            placeholder="Máx"
+            v-model="precioMax"
+            min="0"
+          />
         </div>
 
-        <div class="col-md-auto">
-          <button class="btn btn-outline-secondary" @click="limpiarFiltros">
-            <i class="fas fa-eraser me-1"></i> Limpiar
+        <!-- Botones -->
+        <div class="col-md-2 text-md-end d-flex gap-2">
+          <button @click="filtrarPorPrecio" class="btn btn-success">
+            Filtrar
+          </button>
+          <button @click="limpiarFiltros" class="btn btn-outline-secondary">
+            Limpiar
           </button>
         </div>
       </div>
@@ -71,7 +97,7 @@
 
             <div class="mt-auto d-flex justify-content-between align-items-center">
               <span class="badge bg-success fs-6">${{ p.price }}</span>
-              <span class="badge bg-secondary">{{ p.category?.name || 'Sin Categoría' }}</span>
+              <span class="badge bg-secondary">{{ p.category?.name || "Sin Categoría" }}</span>
             </div>
 
             <button class="btn btn-agregar mt-3 w-100" @click="agregarAlCarrito(p)">
@@ -83,43 +109,78 @@
     </div>
 
     <!-- CARRITO FLOTANTE -->
-    <div class="carrito-flotante card shadow-sm" v-if="carrito.length > 0">
-      <div class="card-body">
-        <h5 class="mb-3"><i class="fas fa-shopping-cart me-2"></i> Tu Carrito</h5>
-
-        <ul class="list-group mb-3">
-          <li v-for="item in carrito" :key="item.id"
-              class="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <strong>{{ item.name }}</strong> <br />
-              <small class="text-muted">${{ item.price }} x {{ item.cantidad }}</small>
-            </div>
-            <div>
-              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, -1)">-</button>
-              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, 1)">+</button>
-              <button class="btn btn-sm btn-outline-danger" @click="eliminarDelCarrito(item)">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </li>
-        </ul>
-
-        <!-- Selección de mesa -->
-        <div class="mb-3">
-          <label class="form-label">Selecciona la mesa</label>
-          <select class="form-select" v-model="mesaSeleccionada">
-            <option value="">-- Selecciona una mesa --</option>
-            <option v-for="m in mesas" :key="m.id" :value="m.id">
-              Mesa {{ m.number }}
-            </option>
-          </select>
-        </div>
-
-        <h5 class="text-end">Total: <span class="text-success">${{ totalCarrito }}</span></h5>
-
-        <button class="btn btn-success w-100 mt-3" @click="confirmarPedido">
-          <i class="fas fa-check me-1"></i> Confirmar Pedido
+    <div v-if="carrito.length > 0" class="carrito-flotante card shadow-sm">
+      <div class="carrito-header d-flex justify-content-between align-items-center p-2">
+        <h5 class="m-0"><i class="fas fa-shopping-cart me-2"></i> Tu Carrito</h5>
+        <button class="btn btn-sm btn-toggle" @click="toggleCarrito">
+          <i :class="mostrarCarrito ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
         </button>
+      </div>
+
+      <transition name="fade">
+        <div v-show="mostrarCarrito" class="card-body">
+          <ul class="list-group mb-3">
+            <li
+              v-for="item in carrito"
+              :key="item.id"
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <strong>{{ item.name }}</strong><br />
+                <small class="text-muted">${{ item.price }} x {{ item.cantidad }}</small>
+              </div>
+              <div>
+                <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, -1)">-</button>
+                <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, 1)">+</button>
+                <button class="btn btn-sm btn-outline-danger" @click="eliminarDelCarrito(item)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+          </ul>
+
+          <div class="mb-3">
+            <label class="form-label">Selecciona la mesa</label>
+            <select class="form-select" v-model="mesaSeleccionada">
+              <option value="">-- Selecciona una mesa --</option>
+              <option v-for="m in mesas" :key="m.id" :value="m.id">Mesa {{ m.number }}</option>
+            </select>
+          </div>
+
+          <h5 class="text-end">Total: <span class="text-success">${{ totalCarrito }}</span></h5>
+
+          <button class="btn btn-success w-100 mt-3" @click="abrirModalPago">
+            <i class="fas fa-check me-1"></i> Confirmar Pedido
+          </button>
+        </div>
+      </transition>
+    </div>
+
+    <!-- MODAL PAGO -->
+    <div class="modal fade" :class="{ show: mostrarModalPago }" v-show="mostrarModalPago"
+      style="background: rgba(0, 0, 0, 0.5); display: block;">
+      <div class="modal-dialog">
+        <div class="modal-content p-3">
+          <div class="modal-header">
+            <h5 class="modal-title">Realizar Pago</h5>
+            <button type="button" class="btn-close" @click="cerrarModalPago"></button>
+          </div>
+          <div class="modal-body">
+            <p>Total a pagar: <strong>${{ totalCarrito }}</strong></p>
+
+            <label class="form-label">Método de pago</label>
+            <select v-model="metodoPago" class="form-select">
+              <option disabled value="">Seleccione un método</option>
+              <option v-for="m in metodos" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="cerrarModalPago">Cancelar</button>
+            <button class="btn btn-success" :disabled="!metodoPago" @click="crearOrdenYPagar">
+              Pagar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -131,12 +192,14 @@ import { getProducts, searchProducts, filterByCategory, filterByPrice } from "@/
 import { getCategories } from "@/services/categories";
 import { getTables } from "@/services/tables";
 import { createOrder } from "@/services/orders";
+import { getPayments } from "@/services/paymentMethods.js";
 
 export default {
   name: "CatalogoProductos",
   data() {
     return {
-      usuario: JSON.parse(localStorage.getItem("user")) || {}, // Usuario logueado
+      usuario: JSON.parse(localStorage.getItem("user")) || {},
+      roles: JSON.parse(localStorage.getItem("roles")) || [],
       productos: [],
       categorias: [],
       mesas: [],
@@ -147,25 +210,45 @@ export default {
       precioMin: 0,
       precioMax: 0,
       carrito: [],
-      roles: JSON.parse(localStorage.getItem("roles")) || [],
+      mostrarModalPago: false,
+      metodoPago: 0,
+      metodos: [],
+      mostrarCarrito: true,
     };
   },
   computed: {
     totalCarrito() {
       return this.carrito.reduce((acc, item) => acc + item.price * item.cantidad, 0);
     },
+    rolActivo() {
+      return this.roles.length > 0 ? this.roles[0].name : null;
+    },
   },
   mounted() {
     this.obtenerProductos();
     this.obtenerCategorias();
     this.obtenerMesas();
+    this.cargarMetodos();
   },
   methods: {
+    toggleCarrito() {
+      this.mostrarCarrito = !this.mostrarCarrito;
+    },
+    async cargarMetodos() {
+      this.cargando = true;
+      try {
+        this.metodos = await getPayments();
+      } catch {
+        mostrarAlerta("Error al cargar los métodos de pago", "danger");
+      } finally {
+        this.cargando = false;
+      }
+    },
     async obtenerProductos() {
       this.cargando = true;
       try {
         this.productos = await getProducts();
-      } catch (error) {
+      } catch {
         mostrarAlerta("Error al cargar los productos", "danger");
       } finally {
         this.cargando = false;
@@ -174,14 +257,14 @@ export default {
     async obtenerCategorias() {
       try {
         this.categorias = await getCategories();
-      } catch (error) {
+      } catch {
         mostrarAlerta("Error al cargar las categorías", "danger");
       }
     },
     async obtenerMesas() {
       try {
         this.mesas = await getTables();
-      } catch (error) {
+      } catch {
         mostrarAlerta("Error al cargar las mesas", "danger");
       }
     },
@@ -215,59 +298,67 @@ export default {
       this.precioMax = "";
       this.obtenerProductos();
     },
-    // Carrito
     agregarAlCarrito(producto) {
       const existe = this.carrito.find((p) => p.id === producto.id);
-      if (existe) {
-        existe.cantidad++;
-      } else {
-        this.carrito.push({ ...producto, cantidad: 1 });
-      }
+      if (existe) existe.cantidad++;
+      else this.carrito.push({ ...producto, cantidad: 1 });
     },
     cambiarCantidad(item, delta) {
       item.cantidad += delta;
-      if (item.cantidad <= 0) {
-        this.eliminarDelCarrito(item);
-      }
+      if (item.cantidad <= 0) this.eliminarDelCarrito(item);
     },
     eliminarDelCarrito(item) {
       this.carrito = this.carrito.filter((p) => p.id !== item.id);
     },
-    async confirmarPedido() {
-      if (this.carrito.length === 0) return;
-
-      if (!this.mesaSeleccionada) {
-        mostrarAlerta("Debes seleccionar una mesa para continuar", "warning");
-        return;
-      }
-
+    abrirModalPago() {
+      if (this.carrito.length === 0) return mostrarAlerta("El carrito está vacío", "warning");
+      if (!this.mesaSeleccionada) return mostrarAlerta("Debes seleccionar una mesa", "warning");
+      this.mostrarModalPago = true;
+    },
+    prepararPayload(pedido) {
+      return {
+        customer: { id: pedido.customer.id },
+        table: { id: pedido.table.id },
+        status: pedido.status,
+        orderDetails: pedido.orderDetails.map((d) => ({
+          product: { id: d.product.id },
+          quantity: d.quantity,
+        })),
+        invoice: {
+          status: pedido.invoice?.status || "PENDING",
+          paymentMethod: { id: parseInt(this.metodoPago) },
+        },
+      };
+    },
+    async crearOrdenYPagar() {
       try {
         const order = {
           customer: { id: this.usuario.id },
-          employee: { id: 1 },
           table: { id: this.mesaSeleccionada },
           status: "PENDING",
-          orderDetails: this.carrito.map(item => ({
+          orderDetails: this.carrito.map((item) => ({
             product: { id: item.id },
             quantity: item.cantidad,
-          }))
+          })),
+          invoice: {},
         };
-
-        await createOrder(order);
-
-        const total = this.totalCarrito;
-
-        mostrarAlerta(
-          `Pedido confirmado con éxito 🎉\nTotal: $${total}`,
-          "success"
-        );
-
-        this.carrito = [];
-        this.mesaSeleccionada = "";
+        const payload = this.prepararPayload(order);
+        await createOrder(payload);
+        mostrarAlerta("Pedido y factura generados correctamente.", "success");
+        this.resetearCarrito();
+        this.cerrarModalPago();
       } catch (error) {
         console.error(error);
-        mostrarAlerta("Error al confirmar un pedido", "danger");
+        mostrarAlerta(error.response?.data || "Error al procesar el pedido", "danger");
       }
+    },
+    cerrarModalPago() {
+      this.mostrarModalPago = false;
+    },
+    resetearCarrito() {
+      this.carrito = [];
+      this.mesaSeleccionada = "";
+      this.metodoPago = 0;
     },
     cambiarRol() {
       localStorage.removeItem("activeRole");
@@ -278,10 +369,38 @@ export default {
 </script>
 
 <style>
+.carrito-flotante {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 400px;
+  border-radius: 16px;
+  z-index: 1050;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.carrito-header {
+  background: #580e00;
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+.btn-toggle {
+  color: white;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 .catalogo-container {
   padding: 2rem;
 }
-
 .catalogo-header {
   background: white;
   border-radius: 16px;
@@ -289,157 +408,18 @@ export default {
   margin-bottom: 2rem;
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
 }
-
 .catalogo-title {
-  color: var(--primary-color);
+  color: #580e00;
   font-weight: 700;
   font-size: 2.2rem;
-  margin-bottom: 0.5rem;
 }
-
 .catalogo-subtitle {
-  color: var(--text-light);
-  font-size: 1.1rem;
+  color: #6c757d;
 }
-
-/* Filtros */
 .catalogo-filtros {
-  border-radius: 16px;
   background: #fff;
-}
-
-.search-input {
-  border-radius: 8px 0 0 8px;
-  border: 2px solid #e9ecef;
-  transition: all 0.3s ease;
-}
-
-.search-input:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(88, 14, 0, 0.1);
-}
-
-.price-filter .input-precio {
-  max-width: 90px;
-  text-align: center;
-}
-
-.btn-agregar {
-  background: #580e00;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-weight: 600;
-}
-.btn-agregar:hover {
-  background: #7a2c1a;
-  color: white;
-}
-
-.btn-precio {
-  white-space: nowrap;
-}
-
-/* Spinner */
-.loading-spinner {
-  padding: 3rem;
-  color: var(--text-light);
-}
-
-/* Estado vacío */
-.empty-state {
-  padding: 3rem;
-  color: var(--text-light);
-}
-
-.empty-icon {
-  font-size: 4rem;
-  color: #dee2e6;
-  margin-bottom: 1rem;
-}
-
-.empty-state h4 {
-  color: var(--text-dark);
-  margin-bottom: 0.5rem;
-}
-
-/* Cards */
-.card {
   border-radius: 16px;
-  border: none;
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(88, 14, 0, 0.2);
-}
-
-.card-title {
-  font-weight: 700;
-  color: #580E00;
-  margin-bottom: 0.5rem;
-}
-
-.card-text {
-  font-size: 0.95rem;
-  margin-bottom: 1rem;
-  color: black;
-  min-height: 40px; /* asegura altura uniforme */
-}
-
-.badge {
-  border-radius: 12px;
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
-}
-
-/* Carrito flotante */
-.carrito-flotante {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 400px;
-  max-height: 80vh;
-  overflow-y: auto;
-  border-radius: 16px;
-  z-index: 1050;
-  transition: transform 0.3s ease;
-}
-
-.carrito-flotante:hover {
-  transform: translateY(-5px);
-}
-
-/* Responsivo */
-@media (max-width: 576px) {
-  .carrito-flotante {
-    width: 90%;
-    right: 5%;
-  }
-
-  .catalogo-container {
-    padding: 1rem;
-  }
-
-  .catalogo-filtros .row {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .catalogo-filtros .col-md-auto {
-    width: 100%;
-  }
-
-  .catalogo-filtros .input-group,
-  .catalogo-filtros select {
-    width: 100%;
-  }
-
-  .badge {
-    display: inline-block;
-    margin-top: 0.5rem;
-  }
+  padding: 1.5rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
 }
 </style>

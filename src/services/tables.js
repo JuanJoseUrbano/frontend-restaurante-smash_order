@@ -32,3 +32,8 @@ export async function updateTable(table) {
 export async function deleteTable(id) {
   return await api.delete(`/tables/${id}`);
 }
+
+export async function countAvailableTables() {
+  const response = await api.get("/tables/available/count");
+  return response.data;
+}

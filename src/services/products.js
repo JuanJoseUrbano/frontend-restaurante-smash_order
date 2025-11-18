@@ -38,3 +38,8 @@ export async function updateProduct(producto) {
 export async function deleteProduct(id) {
   return await api.delete(`/products/${id}`);
 }
+
+export async function countAllProducts() {
+  const response = await api.get("/products/count");
+  return response.data;
+}
