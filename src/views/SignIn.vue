@@ -1,5 +1,5 @@
 <template>
-  <PublicHeader/>
+  <PublicHeader />
   <div class="register-container">
     <div class="register-card">
       <div class="register-header">
@@ -18,14 +18,8 @@
           <div class="form-row">
             <div class="form-group">
               <label for="nombres">Nombres*</label>
-              <input
-                type="text"
-                id="nombres"
-                v-model="user.name"
-                required
-                placeholder="Ej: Lucía Fernanda"
-                class="form-input"
-              />
+              <input type="text" id="nombres" v-model="user.name" required placeholder="Ej: Lucía Fernanda"
+                class="form-input" />
             </div>
           </div>
         </div>
@@ -38,14 +32,8 @@
           <div class="form-row">
             <div class="form-group">
               <label for="usuario">Nombre de Usuario*</label>
-              <input
-                type="text"
-                id="usuario"
-                v-model="user.userName"
-                required
-                placeholder="Ej: lmartinez"
-                class="form-input"
-              />
+              <input type="text" id="usuario" v-model="user.userName" required placeholder="Ej: lmartinez"
+                class="form-input" />
               <small class="input-hint">
                 Mínimo 6 caracteres, sin espacios
               </small>
@@ -53,32 +41,20 @@
             <div class="form-group">
               <label for="contrasenia">Contraseña*</label>
               <div class="password-input">
-                <input
-                  :type="showPassword ? 'text' : 'password'"
-                  id="contrasenia"
-                  v-model="user.password"
-                  required
-                  placeholder="Segura123!"
-                  class="form-input"
-                  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
-                />
-                <button
-                  type="button"
-                  class="toggle-password"
-                  @click="togglePasswordVisibility"
-                  :aria-label="
-                    showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
-                  "
-                >
-                  <i
-                    :class="showPassword ? 'far fa-eye-slash' : 'far fa-eye'"
-                  ></i>
+                <input :type="showPassword ? 'text' : 'password'" id="contrasenia" v-model="user.password" required
+                  placeholder="Segura123!" class="form-input"
+                  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$"
+                  title="Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial" />
+                <button type="button" class="toggle-password" @click="togglePasswordVisibility"
+                  :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                  <i :class="showPassword ? 'far fa-eye-slash' : 'far fa-eye'"></i>
                 </button>
               </div>
               <small class="input-hint">
                 Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial
               </small>
             </div>
+
           </div>
         </div>
 
@@ -90,25 +66,15 @@
           <div class="form-row">
             <div class="form-group">
               <label for="correo">Correo Electrónico*</label>
-              <input
-                type="email"
-                id="correo"
-                v-model="user.email"
-                required
-                placeholder="Ej: ejemplo@mail.com"
-                class="form-input"
-              />
+              <input type="email" id="correo" v-model="user.email" required placeholder="Ej: ejemplo@mail.com"
+                class="form-input" />
             </div>
           </div>
         </div>
 
         <!-- Botón de Registro -->
-        <button
-          type="submit"
-          class="register-button"
-          :disabled="!isFormValid || isSubmitting"
-          :style="{ backgroundColor: isFormValid ? '#580e00' : '#95a5a6' }"
-        >
+        <button type="submit" class="register-button" :disabled="!isFormValid || isSubmitting"
+          :style="{ backgroundColor: isFormValid ? '#580e00' : '#95a5a6' }">
           <span v-if="!isSubmitting">
             <i class="fas fa-user-plus"></i> Crear Cuenta
           </span>
@@ -128,18 +94,17 @@
 </template>
 
 <script>
-import axios from "axios";
 import { mostrarAlerta } from "@/functions";
+import { registerUser } from "@/services/users";
 import PublicHeader from "@/components/PublicHeader.vue";
 
 export default {
   name: "RegisterPage",
-   components: {
+  components: {
     PublicHeader
   },
   data() {
     return {
-      urlApi: "http://localhost:8080/smash-order/api/",
       user: {
         id: "",
         name: "",
@@ -148,7 +113,6 @@ export default {
         password: "",
       },
       showPassword: false,
-      acceptTerms: false,
       isSubmitting: false,
     };
   },
@@ -169,8 +133,7 @@ export default {
     async completarRegistro() {
       try {
         this.isSubmitting = true;
-
-        await axios.post(this.urlApi + "users", this.user);
+        await registerUser(this.user);
         mostrarAlerta("Usuario registrado exitosamente", "success");
         this.$router.push("/login");
       } catch (error) {
@@ -182,6 +145,7 @@ export default {
   },
 };
 </script>
+
 
 
 <style>
@@ -366,11 +330,9 @@ label {
 .register-button {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(
-    135deg,
-    var(--primary-color),
-    var(--primary-dark)
-  );
+  background: linear-gradient(135deg,
+      var(--primary-color),
+      var(--primary-dark));
   color: white;
   border: none;
   border-radius: 10px;
@@ -387,11 +349,9 @@ label {
 }
 
 .register-button:hover:not(:disabled) {
-  background: linear-gradient(
-    135deg,
-    var(--primary-dark),
-    var(--primary-color)
-  );
+  background: linear-gradient(135deg,
+      var(--primary-dark),
+      var(--primary-color));
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(88, 14, 0, 0.35);
 }

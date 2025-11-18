@@ -7,23 +7,22 @@
         </div>
 
         <!-- ACCIONES -->
-        <div class="pedidos-actions card p-3 mb-4 shadow-sm">
+        <div class="pedidos-actions card shadow-sm p-3 mb-4 border-0">
             <div class="row g-3 align-items-center">
+
                 <!-- Búsqueda -->
-                <div class="col-md">
-                    <div class="input-group">
-                        <input type="text" class="form-control search-input" v-model="filtro"
-                            placeholder="Buscar por cliente..." />
-                        <button @click="filtrarBusqueda" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
+                <div class="input-group">
+                    <input type="text" class="form-control search-input" v-model="filtro"
+                        placeholder="🔍 Buscar por cliente..." />
+                    <button @click="filtrarBusqueda" class="btn btn-search">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
 
                 <!-- Estado -->
-                <div class="col-md-auto">
+                <div class="col-lg-2 col-md-3">
                     <select class="form-select" v-model="filtroEstado" @change="filtrarPorEstado">
-                        <option value="0">Todos los estados</option>
+                        <option value="0">Todos</option>
                         <option value="PENDING">Pendiente</option>
                         <option value="IN_PROGRESS">En proceso</option>
                         <option value="COMPLETED">Completado</option>
@@ -32,30 +31,33 @@
                 </div>
 
                 <!-- Fecha -->
-                <div class="col-md-auto">
+                <div class="col-lg-2 col-md-3">
                     <input type="date" class="form-control" v-model="filtroFecha" @change="filtrarPorFecha" />
                 </div>
 
                 <!-- Limpiar -->
-                <div class="col-md-auto">
-                    <button class="btn btn-outline-secondary" @click="limpiarFiltros">
+                <div class="col-lg-auto col-md-6">
+                    <button class="btn btn-outline-secondary w-100" @click="limpiarFiltros">
                         <i class="fas fa-eraser me-1"></i> Limpiar
                     </button>
                 </div>
 
                 <!-- Nuevo Pedido -->
-                <div class="col-md-auto">
-                    <button class="btn btn-success" @click="nuevoPedido">
+                <div class="col-lg-auto col-md-6">
+                    <button class="btn btn-success w-100" @click="nuevoPedido">
                         <i class="fas fa-plus me-1"></i> Nuevo Pedido
                     </button>
                 </div>
 
                 <!-- Badge resultados -->
-                <div class="col-md-auto ms-auto text-end">
-                    <span class="badge bg-info fs-6">{{ pedidos.length }} Resultados</span>
+                <div class="col-lg-auto ms-lg-auto text-end">
+                    <span class="badge bg-info text-dark fs-6 px-3 py-2 shadow-sm">
+                        {{ pedidos.length }} Resultados
+                    </span>
                 </div>
             </div>
         </div>
+
 
         <!-- TABLA -->
         <div class="pedidos-table-container shadow-sm">
@@ -163,7 +165,7 @@
         <div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content shadow-lg">
-                    <div class="modal-header bg-dark text-white">
+                    <div class="modal-header">
                         <h5 class="modal-title">Editar Pedido #{{ pedidoSeleccionado?.id }}</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
@@ -241,7 +243,7 @@
                                     </tr>
                                 </tbody>
                             </table>
-                            <button class="btn btn-sm btn-primary mt-2" @click="agregarProducto('editar')">
+                            <button class="btn btn-sm btn-outline-primary mt-2" @click="agregarProducto('editar')">
                                 <i class="fas fa-plus me-1"></i> Agregar producto
                             </button>
                         </div>
@@ -252,14 +254,20 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button class="btn btn-primary" @click="guardarCambios">Guardar cambios</button>
+                        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cancelar
+                        </button>
+                        <button class="btn btn-editar" @click="guardarCambios">
+                            <i class="fas fa-save me-1"></i> Guardar cambios
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- MODAL NUEVO -->
+
+
+        <!-- MODAL NUEVO + CAMPOS DE PAGO -->
         <div class="modal fade" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content shadow-lg">
@@ -339,6 +347,31 @@
                         <div class="mb-3 text-end">
                             <strong>Total: ${{ (pedidoNuevo?.total || 0).toFixed(2) }}</strong>
                         </div>
+
+                        <!-- CAMPOS DE PAGO -->
+                        <hr>
+                        <h4>Información de Pago</h4>
+
+                        <!-- Método de Pago -->
+                        <div class="mb-3">
+                            <label class="form-label">Método de Pago</label>
+                            <select v-model="invoice.paymentMethodId" class="form-select">
+                                <option disabled value="">Seleccione un método</option>
+                                <option v-for="m in metodos" :key="m.id" :value="m.id">{{ m.name }}</option>
+                            </select>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="mb-3 w-50">
+                            <label class="form-label">Estado</label>
+                            <select v-model="invoice.status" class="form-select">
+                                <option value="PAID">Pagado</option>
+                                <option value="PENDING">Pendiente</option>
+                                <option value="CANCELLED">Cancelado</option>
+                                <option value="REFUNDED">Reembolsado</option>
+                            </select>
+                        </div>
+
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -355,6 +388,7 @@ import { mostrarAlerta, confirmar } from "@/functions.js";
 import Modal from "bootstrap/js/dist/modal";
 import { getOrders, deleteOrder, updateOrder, createOrder } from "@/services/orders";
 import { getProducts } from "@/services/products";
+import { getPayments } from "@/services/paymentMethods.js";
 import { getTables } from "@/services/tables";
 import { searchUsers } from "@/services/users";
 import { nextTick } from "vue";
@@ -364,6 +398,7 @@ export default {
     data() {
         return {
             pedidos: [],
+            invoice: { paymentMethodId: "", status: "PENDING" },
             pedidosOriginales: [],
             pedidoSeleccionado: null,
             pedidoNuevo: null,
@@ -380,7 +415,8 @@ export default {
             resultadosCliente: [],
             actualizandoPedidos: false,
             timeoutBusqueda: null,
-            timeoutFiltro: null
+            timeoutFiltro: null,
+            metodos: []
         };
     },
     mounted() {
@@ -398,7 +434,8 @@ export default {
                 await Promise.all([
                     this.obtenerPedidos(),
                     this.cargarProductos(),
-                    this.cargarMesas()
+                    this.cargarMesas(),
+                    this.cargarMetodos()
                 ]);
             } catch (error) {
                 console.error('Error inicializando datos:', error);
@@ -417,6 +454,12 @@ export default {
                 console.error('Error obteniendo pedidos:', error);
                 throw error;
             }
+        },
+        async cargarMetodos() {
+            this.cargando = true;
+            try { this.metodos = await getPayments(); }
+            catch { mostrarAlerta("Error al cargar los métodos de pago", "danger"); }
+            finally { this.cargando = false; }
         },
 
         async actualizarListaPedidos() {
@@ -559,7 +602,13 @@ export default {
                 orderDetails: pedido.orderDetails.map(d => ({
                     product: { id: d.product.id },
                     quantity: d.quantity
-                }))
+                })),
+                invoice: {
+                    status: this.invoice.status,
+                    paymentMethod: {
+                        id: this.invoice.paymentMethodId
+                    }
+                }
             };
         },
 
@@ -765,13 +814,85 @@ export default {
 }
 
 .pedidos-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
 }
 
-/* ✅ Restauramos colores normales de Bootstrap */
+.search-input {
+    border-radius: 12px 0 0 12px !important;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    border: 1px solid #dee2e6;
+    box-shadow: none;
+}
+
+.search-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn-search {
+    border-radius: 0 12px 12px 0 !important;
+    padding: 0.65rem 1rem;
+    font-size: 1rem;
+    background: #0d6efd;
+    border: 1px solid #0d6efd;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-search:hover {
+    background: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.pedidos-actions .row {
+    row-gap: 1rem;
+    column-gap: 1rem;
+}
+
+.pedidos-actions .form-control,
+.pedidos-actions .form-select {
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    font-size: 0.95rem;
+    box-shadow: none;
+    transition: all 0.2s ease;
+}
+
+.pedidos-actions .form-control:focus,
+.pedidos-actions .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.pedidos-actions .btn {
+    border-radius: 10px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.pedidos-actions .btn i {
+    margin-right: 0.3rem;
+}
+
+.pedidos-actions .badge {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 12px;
+    background: #e9f5ff;
+    color: #0d6efd;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(13, 110, 253, 0.2);
+}
+
 .btn-primary,
 .btn-outline-primary {
     background-color: #0d6efd !important;
@@ -814,7 +935,7 @@ export default {
     color: #fff !important;
 }
 
-/* Animación al pasar el mouse */
+/* Animación hover */
 .btn {
     font-weight: 600;
     border-radius: 8px;
@@ -826,6 +947,7 @@ export default {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+/* Tabla de pedidos */
 .pedidos-table-container {
     background: white;
     border-radius: 16px;
@@ -834,6 +956,7 @@ export default {
     overflow: hidden;
 }
 
+/* Loading spinner */
 .loading-spinner {
     text-align: center;
     padding: 3rem;
@@ -846,6 +969,7 @@ export default {
     margin-bottom: 1rem;
 }
 
+/* Filas de pedidos */
 .pedido-row {
     transition: all 0.2s ease;
     border-bottom: 1px solid #eee;
@@ -856,6 +980,7 @@ export default {
     transform: translateX(4px);
 }
 
+/* Botones de acciones */
 .action-buttons {
     display: flex;
     justify-content: center;
@@ -872,6 +997,7 @@ export default {
     transform: translateY(-2px);
 }
 
+/* Estado vacío */
 .empty-state {
     text-align: center;
     padding: 3rem;
@@ -889,6 +1015,7 @@ export default {
     margin-bottom: 0.5rem;
 }
 
+/* --- MODALES --- */
 .modal-content {
     border-radius: 16px;
     border: none;
@@ -911,5 +1038,87 @@ export default {
 .modal-footer {
     border-radius: 0 0 16px 16px;
     padding: 1.2rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+}
+
+/* --- Botones dentro de modales --- */
+.modal-footer .btn {
+    border-radius: 10px;
+    padding: 0.55rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    min-width: auto;
+    transition: all 0.25s ease;
+}
+
+.modal-footer .btn-primary {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+}
+
+.modal-footer .btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7, #084298);
+    box-shadow: 0 6px 14px rgba(13, 110, 253, 0.4);
+    transform: translateY(-2px);
+}
+
+.modal-footer .btn-outline-secondary {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+}
+
+.modal-footer .btn-outline-secondary:hover {
+    background: #e9ecef;
+    border-color: #ced4da;
+    transform: translateY(-2px);
+}
+
+/* Botón agregar dentro del modal */
+.modal-body .btn-primary {
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    background: linear-gradient(135deg, #198754, #157347);
+    border: none;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(25, 135, 84, 0.3);
+}
+
+.modal-body .btn-primary:hover {
+    background: linear-gradient(135deg, #157347, #0f5132);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(25, 135, 84, 0.4);
+}
+
+/* --- MODAL EDITAR (azul elegante) --- */
+#modalEditarPedido .modal-header {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: #fff;
+}
+
+#modalEditarPedido .modal-title {
+    font-weight: 600;
+}
+
+#modalEditarPedido .btn-editar {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    border: none;
+    color: #fff !important;
+    font-weight: 600;
+    padding: 0.6rem 1.4rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+}
+
+#modalEditarPedido .btn-editar:hover {
+    background: linear-gradient(135deg, #0b5ed7, #084298);
+    box-shadow: 0 6px 14px rgba(13, 110, 253, 0.4);
+    transform: translateY(-2px);
 }
 </style>
