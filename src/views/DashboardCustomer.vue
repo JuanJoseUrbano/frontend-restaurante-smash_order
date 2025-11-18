@@ -1,6 +1,7 @@
 <template>
   <!-- Header -->
-    <HeaderAuthenticated :username="username" :roles="roles" :active-role="activeRole" />
+  <HeaderAuthenticated :username="username" :roles="roles" :active-role="activeRole" />
+  
   <div>
     <div v-if="isCustomer" class="dashboard-container">
       <!-- Sidebar -->
@@ -17,7 +18,6 @@
                 <i class="fas fa-chair me-2"></i> Mesas
               </router-link>
             </li>
-
             <li>
               <router-link to="/dashboard-customer/orders">
                 <i class="fas fa-clipboard-list me-2"></i> Mis Pedidos
@@ -49,21 +49,23 @@
             <div class="summary-card card-products">
               <i class="fas fa-box-open card-icon"></i>
               <div class="card-info">
-                <h3>{{ productos.length }}</h3>
+                <h3>{{ productosCount }}</h3>
                 <p>Productos disponibles</p>
               </div>
             </div>
+
             <div class="summary-card card-orders">
               <i class="fas fa-clipboard-list card-icon"></i>
               <div class="card-info">
-                <h3>{{ pedidos.length }}</h3>
+                <h3>{{ pedidosCount }}</h3>
                 <p>Pedidos realizados</p>
               </div>
             </div>
+
             <div class="summary-card card-reservations">
               <i class="fas fa-calendar-check card-icon"></i>
               <div class="card-info">
-                <h3>{{ reservas.length }}</h3>
+                <h3>{{ reservasCount }}</h3>
                 <p>Reservas activas</p>
               </div>
             </div>
@@ -84,6 +86,9 @@
 
 <script>
 import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
+import { countAllProducts } from "@/services/products";
+import { countOrdersByCustomer } from "@/services/orders"; 
+import { countActiveReservationsByCustome } from "@/services/reservation";
 
 export default {
   name: "CustomerDashboardLayout",
@@ -91,11 +96,13 @@ export default {
   data() {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     return {
+      userId: user.id || null,
       username: user.userName || "Cliente",
       roles: user.roles || [],
-      productos: [],
-      pedidos: [],
-      reservas: []
+      productosCount: 0,
+      pedidosCount: 0,
+      reservasCount: 0,
+      intervalId: null
     };
   },
   computed: {
@@ -111,14 +118,43 @@ export default {
       localStorage.removeItem("activeRole");
       this.$router.push("/select-role");
     },
+
     async cargarProductos() {
-      this.productos = [{ id: 1 }, { id: 2 }, { id: 3 }];
+      try {
+        this.productosCount = await countAllProducts();
+      } catch (error) {
+        console.error("Error cargando productos:", error);
+      }
     },
+
     async cargarPedidos() {
-      this.pedidos = [{ id: 1 }, { id: 2 }];
+      if (!this.userId) return;
+      try {
+        this.pedidosCount = await countOrdersByCustomer(this.userId);
+      } catch (error) {
+        console.error("Error cargando pedidos:", error);
+      }
     },
+
     async cargarReservas() {
-      this.reservas = [{ id: 1 }];
+      if (!this.userId) return;
+      try {
+        this.reservasCount = await countActiveReservationsByCustome(this.userId);
+      } catch (error) {
+        console.error("Error cargando reservas:", error);
+      }
+    },
+
+    async cargarDatos() {
+      await Promise.all([
+        this.cargarProductos(),
+        this.cargarPedidos(),
+        this.cargarReservas()
+      ]);
+    },
+
+    iniciarAutoRefresh() {
+      this.intervalId = setInterval(this.cargarDatos, 5000);
     }
   },
   mounted() {
@@ -126,12 +162,15 @@ export default {
       this.$router.push("/select-role");
       return;
     }
-    this.cargarProductos();
-    this.cargarPedidos();
-    this.cargarReservas();
+    this.cargarDatos();
+    this.iniciarAutoRefresh();
+  },
+  beforeUnmount() {
+    if (this.intervalId) clearInterval(this.intervalId);
   }
 };
 </script>
+
 
 <style scoped>
 .dashboard-container {

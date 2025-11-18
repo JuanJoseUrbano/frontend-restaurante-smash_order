@@ -6,7 +6,6 @@
   </div>
 
   <div class="catalogo-container">
-
     <!-- HEADER -->
     <div class="catalogo-header shadow-sm text-center">
       <h1 class="catalogo-title">Menú Disponible</h1>
@@ -28,7 +27,9 @@
         <div class="col-md-auto">
           <select class="form-select" v-model="filtroCategoria" @change="filtrarPorCategoria">
             <option value="0">Todas las categorías</option>
-            <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
+            <option v-for="c in categorias" :key="c.id" :value="c.id">
+              {{ c.name }}
+            </option>
           </select>
         </div>
 
@@ -36,7 +37,9 @@
           <div class="input-group price-filter">
             <input type="number" class="form-control input-precio" placeholder="Mín" v-model="precioMin" min="0" />
             <input type="number" class="form-control input-precio" placeholder="Máx" v-model="precioMax" min="0" />
-            <button @click="filtrarPorPrecio" class="btn btn-success btn-precio">Filtrar</button>
+            <button @click="filtrarPorPrecio" class="btn btn-success btn-precio">
+              Filtrar
+            </button>
           </div>
         </div>
 
@@ -71,7 +74,7 @@
 
             <div class="mt-auto d-flex justify-content-between align-items-center">
               <span class="badge bg-success fs-6">${{ p.price }}</span>
-              <span class="badge bg-secondary">{{ p.category?.name || 'Sin Categoría' }}</span>
+              <span class="badge bg-secondary">{{ p.category?.name || "Sin Categoría" }}</span>
             </div>
 
             <button class="btn btn-agregar mt-3 w-100" @click="agregarAlCarrito(p)">
@@ -85,18 +88,24 @@
     <!-- CARRITO FLOTANTE -->
     <div class="carrito-flotante card shadow-sm" v-if="carrito.length > 0">
       <div class="card-body">
-        <h5 class="mb-3"><i class="fas fa-shopping-cart me-2"></i> Tu Carrito</h5>
+        <h5 class="mb-3">
+          <i class="fas fa-shopping-cart me-2"></i> Tu Carrito
+        </h5>
 
         <ul class="list-group mb-3">
           <li v-for="item in carrito" :key="item.id"
-              class="list-group-item d-flex justify-content-between align-items-center">
+            class="list-group-item d-flex justify-content-between align-items-center">
             <div>
               <strong>{{ item.name }}</strong> <br />
               <small class="text-muted">${{ item.price }} x {{ item.cantidad }}</small>
             </div>
             <div>
-              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, -1)">-</button>
-              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, 1)">+</button>
+              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, -1)">
+                -
+              </button>
+              <button class="btn btn-sm btn-outline-secondary me-2" @click="cambiarCantidad(item, 1)">
+                +
+              </button>
               <button class="btn btn-sm btn-outline-danger" @click="eliminarDelCarrito(item)">
                 <i class="fas fa-trash"></i>
               </button>
@@ -115,11 +124,41 @@
           </select>
         </div>
 
-        <h5 class="text-end">Total: <span class="text-success">${{ totalCarrito }}</span></h5>
+        <h5 class="text-end">
+          Total: <span class="text-success">${{ totalCarrito }}</span>
+        </h5>
 
-        <button class="btn btn-success w-100 mt-3" @click="confirmarPedido">
+        <button class="btn btn-success w-100 mt-3" @click="abrirModalPago">
           <i class="fas fa-check me-1"></i> Confirmar Pedido
         </button>
+      </div>
+    </div>
+
+    <!-- MODAL PAGO -->
+    <div class="modal fade" :class="{ show: mostrarModalPago }" v-show="mostrarModalPago"
+      style="background: rgba(0, 0, 0, 0.5); display: block;">
+      <div class="modal-dialog">
+        <div class="modal-content p-3">
+          <div class="modal-header">
+            <h5 class="modal-title">Realizar Pago</h5>
+            <button type="button" class="btn-close" @click="cerrarModalPago"></button>
+          </div>
+          <div class="modal-body">
+            <p>Total a pagar: <strong>${{ totalCarrito }}</strong></p>
+
+            <label class="form-label">Método de pago</label>
+            <select v-model="metodoPago" class="form-select">
+              <option disabled value="">Seleccione un método</option>
+              <option v-for="m in metodos" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" @click="cerrarModalPago">Cancelar</button>
+            <button class="btn btn-success" :disabled="!metodoPago" @click="crearOrdenYPagar">
+              Pagar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -127,16 +166,23 @@
 
 <script>
 import { mostrarAlerta } from "@/functions.js";
-import { getProducts, searchProducts, filterByCategory, filterByPrice } from "@/services/products";
+import {
+  getProducts,
+  searchProducts,
+  filterByCategory,
+  filterByPrice,
+} from "@/services/products";
 import { getCategories } from "@/services/categories";
 import { getTables } from "@/services/tables";
 import { createOrder } from "@/services/orders";
+import { getPayments } from "@/services/paymentMethods.js";
 
 export default {
   name: "CatalogoProductos",
   data() {
     return {
-      usuario: JSON.parse(localStorage.getItem("user")) || {}, // Usuario logueado
+      usuario: JSON.parse(localStorage.getItem("user")) || {},
+      roles: JSON.parse(localStorage.getItem("roles")) || [],
       productos: [],
       categorias: [],
       mesas: [],
@@ -147,25 +193,40 @@ export default {
       precioMin: 0,
       precioMax: 0,
       carrito: [],
-      roles: JSON.parse(localStorage.getItem("roles")) || [],
+      mostrarModalPago: false,
+      metodoPago: 0,
+      metodos: []
     };
   },
   computed: {
     totalCarrito() {
-      return this.carrito.reduce((acc, item) => acc + item.price * item.cantidad, 0);
+      return this.carrito.reduce(
+        (acc, item) => acc + item.price * item.cantidad,
+        0
+      );
+    },
+    rolActivo() {
+      return this.roles.length > 0 ? this.roles[0].name : null;
     },
   },
   mounted() {
     this.obtenerProductos();
     this.obtenerCategorias();
     this.obtenerMesas();
+    this.cargarMetodos();
   },
   methods: {
+    async cargarMetodos() {
+      this.cargando = true;
+      try { this.metodos = await getPayments(); }
+      catch { mostrarAlerta("Error al cargar los métodos de pago", "danger"); }
+      finally { this.cargando = false; }
+    },
     async obtenerProductos() {
       this.cargando = true;
       try {
         this.productos = await getProducts();
-      } catch (error) {
+      } catch {
         mostrarAlerta("Error al cargar los productos", "danger");
       } finally {
         this.cargando = false;
@@ -174,14 +235,14 @@ export default {
     async obtenerCategorias() {
       try {
         this.categorias = await getCategories();
-      } catch (error) {
+      } catch {
         mostrarAlerta("Error al cargar las categorías", "danger");
       }
     },
     async obtenerMesas() {
       try {
         this.mesas = await getTables();
-      } catch (error) {
+      } catch {
         mostrarAlerta("Error al cargar las mesas", "danger");
       }
     },
@@ -215,59 +276,77 @@ export default {
       this.precioMax = "";
       this.obtenerProductos();
     },
-    // Carrito
     agregarAlCarrito(producto) {
       const existe = this.carrito.find((p) => p.id === producto.id);
-      if (existe) {
-        existe.cantidad++;
-      } else {
-        this.carrito.push({ ...producto, cantidad: 1 });
-      }
+      if (existe) existe.cantidad++;
+      else this.carrito.push({ ...producto, cantidad: 1 });
     },
     cambiarCantidad(item, delta) {
       item.cantidad += delta;
-      if (item.cantidad <= 0) {
-        this.eliminarDelCarrito(item);
-      }
+      if (item.cantidad <= 0) this.eliminarDelCarrito(item);
     },
     eliminarDelCarrito(item) {
       this.carrito = this.carrito.filter((p) => p.id !== item.id);
     },
-    async confirmarPedido() {
-      if (this.carrito.length === 0) return;
-
-      if (!this.mesaSeleccionada) {
-        mostrarAlerta("Debes seleccionar una mesa para continuar", "warning");
+    abrirModalPago() {
+      if (this.carrito.length === 0) {
+        mostrarAlerta("El carrito está vacío", "warning");
         return;
       }
-
+      if (!this.mesaSeleccionada) {
+        mostrarAlerta("Debes seleccionar una mesa", "warning");
+        return;
+      }
+      this.mostrarModalPago = true;
+    },
+    prepararPayload(pedido) {
+      return {
+        customer: { id: pedido.customer.id },
+        table: { id: pedido.table.id },
+        status: pedido.status,
+        orderDetails: pedido.orderDetails.map(d => ({
+          product: { id: d.product.id },
+          quantity: d.quantity
+        })),
+        invoice: {
+          status: pedido.invoice?.status || "PENDING",
+          paymentMethod: {
+            id: parseInt(this.metodoPago)
+          }
+        }
+      };
+    },
+    async crearOrdenYPagar() {
       try {
         const order = {
           customer: { id: this.usuario.id },
-          employee: { id: 1 },
           table: { id: this.mesaSeleccionada },
           status: "PENDING",
-          orderDetails: this.carrito.map(item => ({
+          orderDetails: this.carrito.map((item) => ({
             product: { id: item.id },
             quantity: item.cantidad,
-          }))
+          })),
+          invoice: {}
         };
 
-        await createOrder(order);
+        const payload = this.prepararPayload(order);
+        await createOrder(payload);
 
-        const total = this.totalCarrito;
-
-        mostrarAlerta(
-          `Pedido confirmado con éxito 🎉\nTotal: $${total}`,
-          "success"
-        );
-
-        this.carrito = [];
-        this.mesaSeleccionada = "";
+        mostrarAlerta(`Pedido y factura generados correctamente.`, "success");
+        this.resetearCarrito();
+        this.cerrarModalPago();
       } catch (error) {
         console.error(error);
-        mostrarAlerta("Error al confirmar un pedido", "danger");
+        mostrarAlerta(error.response?.data || "Error al procesar el pedido", "danger");
       }
+    },
+    cerrarModalPago() {
+      this.mostrarModalPago = false;
+    },
+    resetearCarrito() {
+      this.carrito = [];
+      this.mesaSeleccionada = "";
+      this.metodoPago = 0;
     },
     cambiarRol() {
       localStorage.removeItem("activeRole");
@@ -275,7 +354,7 @@ export default {
     },
   },
 };
-</script>
+</script> 
 
 <style>
 .catalogo-container {
@@ -331,6 +410,7 @@ export default {
   border-radius: 20px;
   font-weight: 600;
 }
+
 .btn-agregar:hover {
   background: #7a2c1a;
   color: white;
@@ -386,7 +466,8 @@ export default {
   font-size: 0.95rem;
   margin-bottom: 1rem;
   color: black;
-  min-height: 40px; /* asegura altura uniforme */
+  min-height: 40px;
+  /* asegura altura uniforme */
 }
 
 .badge {

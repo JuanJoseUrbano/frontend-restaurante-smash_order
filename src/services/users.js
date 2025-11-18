@@ -40,3 +40,8 @@ export async function getUserByEmail(email) {
   const res = await api.get(`/users/email/${email}`);
   return res.data;
 }
+
+export async function countAllUsers() {
+  const response = await api.get("/users/count");
+  return response.data;
+}

@@ -10,6 +10,11 @@ export async function getOrders() {
   return response.data;
 }
 
+export async function getOrdersWithoutInvoice() {
+  const response = await api.get("orders/without-invoice");
+  return response.data;
+}
+
 export async function getOrderById(id) {
   const response = await api.get(`/orders/${id}`);
   return response.data;
@@ -47,3 +52,14 @@ export async function getOrdersBetweenDates(start, end) {
   });
   return response.data;
 }
+
+export async function countAllOrders() {
+  const response = await api.get("/orders/count");
+  return response.data;
+}
+
+export async function countOrdersByCustomer(customerId) {
+  const response = await api.get(`/orders/customer/${customerId}/count`);
+  return response.data;
+}
+
