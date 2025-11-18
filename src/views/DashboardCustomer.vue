@@ -96,7 +96,7 @@
 import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
 import { countAllProducts } from "@/services/products";
 import { countOrdersByCustomer } from "@/services/orders";
-import { countActiveReservationsByCustome } from "@/services/reservation";
+import { countActiveReservationsByCustomer } from "@/services/reservation";
 
 export default {
   name: "CustomerDashboardLayout",
@@ -131,7 +131,7 @@ export default {
         this.productosCount = await countAllProducts();
         if (this.userId) {
           this.pedidosCount = await countOrdersByCustomer(this.userId);
-          this.reservasCount = await countActiveReservationsByCustome(this.userId);
+          this.reservasCount = await countActiveReservationsByCustomer(this.userId);
         }
       } catch (error) {
         console.error("Error al cargar datos:", error);

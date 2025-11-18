@@ -18,9 +18,13 @@
           <span v-else>Cargando...</span>
         </button>
       </form>
+      <!-- 🔸 Enlace para recuperar contraseña -->
+      <p class="forgot-text">
+        <router-link to="/forgot-password" class="link">¿Olvidaste tu contraseña?</router-link>
+      </p>
       <p class="register-text">
         ¿No tienes cuenta?
-        <router-link to="/signin" class="register-link">Regístrate aquí</router-link>
+        <router-link to="/signin" class="link">Regístrate aquí</router-link>
       </p>
     </div>
   </div>
@@ -223,8 +227,13 @@ input[type="password"]:focus {
   font-size: 0.95rem;
   color: var(--text-light);
 }
+.forgot-text {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--text-light);
+}
 
-.register-link {
+.link {
   color: var(--primary-color);
   text-decoration: none;
   font-weight: 600;

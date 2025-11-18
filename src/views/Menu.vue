@@ -12,12 +12,7 @@
         <!-- Buscar por nombre -->
         <div class="col-md-5">
           <div class="input-group">
-            <input
-              type="text"
-              class="form-control search-input"
-              v-model="filtro"
-              placeholder="Buscar por nombre..."
-            />
+            <input type="text" class="form-control search-input" v-model="filtro" placeholder="Buscar por nombre..." />
             <button @click="filtrarBusqueda" class="btn btn-buscar">
               <i class="fas fa-search"></i>
             </button>
@@ -26,11 +21,7 @@
 
         <!-- Categorías -->
         <div class="col-md-3">
-          <select
-            class="form-select"
-            v-model="filtroCategoria"
-            @change="filtrarPorCategoria"
-          >
+          <select class="form-select" v-model="filtroCategoria" @change="filtrarPorCategoria">
             <option value="0">Todas las categorías</option>
             <option v-for="c in categorias" :key="c.id" :value="c.id">
               {{ c.name }}
@@ -40,20 +31,8 @@
 
         <!-- Precio mínimo y máximo -->
         <div class="col-md-2 d-flex gap-2">
-          <input
-            type="number"
-            class="form-control input-precio"
-            placeholder="Mín"
-            v-model="precioMin"
-            min="0"
-          />
-          <input
-            type="number"
-            class="form-control input-precio"
-            placeholder="Máx"
-            v-model="precioMax"
-            min="0"
-          />
+          <input type="number" class="form-control input-precio" placeholder="Mín" v-model="precioMin" min="0" />
+          <input type="number" class="form-control input-precio" placeholder="Máx" v-model="precioMax" min="0" />
         </div>
 
         <!-- Botones -->
@@ -69,11 +48,9 @@
     </div>
 
     <!-- CATÁLOGO -->
-    <div v-if="cargando" class="loading-spinner text-center">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Cargando...</span>
-      </div>
-      <p>Cargando Productos...</p>
+    <div v-if="cargando" class="loading-overlay">
+      <div class="spinner"></div>
+      <p class="mt-2 text-dark">Cargando Productos...</p>
     </div>
 
     <div v-else-if="productos.length === 0" class="empty-state text-center">
@@ -87,16 +64,9 @@
         <div class="card producto-card h-100 shadow-sm">
           <!-- Imagen del producto -->
           <div class="imagen-container">
-            <img
-              v-if="p.image"
-              :src="p.image.startsWith('data:image') ? p.image : `data:image/png;base64,${p.image}`"
-              alt="Imagen del producto"
-              class="card-img-top producto-img"
-            />
-            <div
-              v-else
-              class="sin-imagen d-flex align-items-center justify-content-center"
-            >
+            <img v-if="p.image" :src="p.image.startsWith('data:image') ? p.image : `data:image/png;base64,${p.image}`"
+              alt="Imagen del producto" class="card-img-top producto-img" />
+            <div v-else class="sin-imagen d-flex align-items-center justify-content-center">
               <i class="fas fa-image fa-3x text-muted"></i>
             </div>
           </div>
@@ -130,11 +100,8 @@
       <transition name="fade">
         <div v-show="mostrarCarrito" class="card-body">
           <ul class="list-group mb-3">
-            <li
-              v-for="item in carrito"
-              :key="item.id"
-              class="list-group-item d-flex justify-content-between align-items-center"
-            >
+            <li v-for="item in carrito" :key="item.id"
+              class="list-group-item d-flex justify-content-between align-items-center">
               <div>
                 <strong>{{ item.name }}</strong><br />
                 <small class="text-muted">{{ formatearPrecio(item.price) }} x {{ item.cantidad }}</small>
@@ -197,8 +164,8 @@
 </template>
 
 <script>
-import { mostrarAlerta } from "@/functions.js";
-import { getProducts, searchProducts, filterByCategory, filterByPrice } from "@/services/products";
+import { validarRangoDePrecio, mostrarAlerta } from "@/functions.js";
+import { getProducts, searchProductsByName, getProductsByCategory, filterProductsByPrice } from "@/services/products";
 import { getCategories } from "@/services/categories";
 import { getTables } from "@/services/tables";
 import { createOrder } from "@/services/orders";
@@ -217,8 +184,8 @@ export default {
       cargando: false,
       filtro: "",
       filtroCategoria: 0,
-      precioMin: 0,
-      precioMax: 0,
+      precioMin: '',
+      precioMax: '',
       carrito: [],
       mostrarModalPago: false,
       metodoPago: 0,
@@ -289,7 +256,7 @@ export default {
     async filtrarBusqueda() {
       if (!this.filtro.trim()) return this.obtenerProductos();
       try {
-        this.productos = await searchProducts(this.filtro);
+        this.productos = await searchProductsByName(this.filtro);
       } catch {
         mostrarAlerta("Error en la búsqueda", "danger");
       }
@@ -297,18 +264,21 @@ export default {
     async filtrarPorCategoria() {
       if (this.filtroCategoria == 0) return this.obtenerProductos();
       try {
-        this.productos = await filterByCategory(this.filtroCategoria);
+        this.productos = await getProductsByCategory(this.filtroCategoria);
       } catch {
         mostrarAlerta("Error al filtrar por categoría", "danger");
       }
     },
     async filtrarPorPrecio() {
+      if (!validarRangoDePrecio(this.precioMin, this.precioMax)) return;
+
       try {
-        this.productos = await filterByPrice(this.precioMin, this.precioMax);
+        this.productos = await filterProductsByPrice(this.precioMin, this.precioMax);
       } catch {
-        mostrarAlerta("Error al filtrar por precio", "danger");
+        mostrarAlerta("Error", "error", "Error al filtrar por precio");
       }
     },
+
     limpiarFiltros() {
       this.filtro = "";
       this.filtroCategoria = 0;
@@ -397,29 +367,35 @@ export default {
   transition: all 0.3s ease;
   overflow: hidden;
 }
+
 .carrito-header {
   background: #580e00;
   color: white;
   border-radius: 12px 12px 0 0;
 }
+
 .btn-toggle {
   color: white;
   background: none;
   border: none;
   font-size: 1.1rem;
 }
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
+
 .catalogo-container {
   padding: 2rem;
   background: #f8f9fa;
 }
+
 .catalogo-header {
   background: white;
   border-radius: 16px;
@@ -427,14 +403,17 @@ export default {
   margin-bottom: 2rem;
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
 }
+
 .catalogo-title {
   color: #580e00;
   font-weight: 700;
   font-size: 2.2rem;
 }
+
 .catalogo-subtitle {
   color: #6c757d;
 }
+
 .catalogo-filtros {
   background: #fff;
   border-radius: 16px;
@@ -451,15 +430,18 @@ export default {
   height: 220px;
   overflow: hidden;
 }
+
 .producto-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   transition: transform 0.3s ease;
 }
+
 .producto-img:hover {
   transform: scale(1.05);
 }
+
 .sin-imagen {
   height: 220px;
   background-color: #f0f0f0;
@@ -472,7 +454,35 @@ export default {
   border-radius: 10px;
   transition: 0.3s;
 }
+
 .btn-agregar:hover {
   background-color: #71160a;
+}
+
+/* === SPINNER DE CARGA === */
+.loading-overlay {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

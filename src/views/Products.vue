@@ -6,62 +6,68 @@
       <p class="productos-subtitle">Administra, busca y organiza tus productos</p>
     </div>
 
-    <!-- ACCIONES -->
-    <div class="productos-actions card p-3 mb-4 shadow-sm">
-      <div class="row g-3 align-items-center">
+    <!-- ACCIONES / FILTROS -->
+    <div class="productos-filtros card p-3 mb-4 shadow-sm">
+      <div class="row g-3 align-items-center flex-wrap">
         <!-- Botón agregar -->
         <div class="col-md-auto">
-          <button class="btn btn-guardar btn-sm d-flex align-items-center" @click="modalAgregar.show()">
-            <i class="fas fa-plus-circle me-2"></i> Nuevo Producto
+          <button class="btn btn-guardar d-flex align-items-center gap-2" @click="modalAgregar.show()">
+            <i class="fas fa-plus-circle"></i> Nuevo Producto
           </button>
         </div>
 
-        <!-- Búsqueda -->
-        <div class="search-group">
-          <input type="text" class="search-input" v-model="filtro" placeholder="Buscar por nombre..." />
-          <button @click="filtrarBusqueda" class="btn-buscar">
-            <i class="fas fa-search"></i>
-          </button>
-        </div>
-
-        <!-- Categoría -->
-        <div class="col-md-auto">
-          <select class="form-select" v-model="filtroCategoria" @change="filtrarPorCategoria">
-            <option value="0">Todas las categorías</option>
-            <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-        </div>
-
-        <!-- Precio -->
-        <div class="col-md-auto">
-          <div class="input-group price-filter">
-            <input type="number" class="form-control input-precio" placeholder="Mín" v-model="precioMin" min="0" />
-            <input type="number" class="form-control input-precio" placeholder="Máx" v-model="precioMax" min="0" />
-            <button @click="filtrarPorPrecio" class="btn btn-success btn-precio">Filtrar</button>
+        <!-- Buscar por nombre -->
+        <div class="col-md-4">
+          <div class="input-group">
+            <input type="text" class="form-control search-input" v-model="filtro" placeholder="Buscar por nombre..." />
+            <button @click="filtrarBusqueda" class="btn btn-buscar">
+              <i class="fas fa-search"></i>
+            </button>
           </div>
         </div>
 
-        <!-- Limpiar -->
-        <div class="col-md-auto">
-          <button class="btn btn-outline-secondary" @click="limpiarFiltros">
+        <!-- Categorías -->
+        <div class="col-md-3">
+          <select class="form-select" v-model="filtroCategoria" @change="filtrarPorCategoria">
+            <option value="0">Todas las categorías</option>
+            <option v-for="c in categorias" :key="c.id" :value="c.id">
+              {{ c.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Precio mínimo y máximo -->
+        <div class="col-md-3 d-flex gap-2">
+          <input type="number" class="form-control input-precio" placeholder="Mín" v-model="precioMin" min="0" />
+          <input type="number" class="form-control input-precio" placeholder="Máx" v-model="precioMax" min="0" />
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="col-md-2 d-flex gap-2 justify-content-end">
+          <button @click="filtrarPorPrecio" class="btn btn-success flex-grow-1">
+            <i class="fas fa-filter me-1"></i> Filtrar
+          </button>
+          <button @click="limpiarFiltros" class="btn btn-secondary flex-grow-1">
             <i class="fas fa-eraser me-1"></i> Limpiar
           </button>
         </div>
 
-        <!-- Badge resultados -->
-        <div class="col-md-auto ms-auto text-end">
-          <span class="badge bg-info fs-6">{{ productos.length }} Resultados</span>
+        <!-- Contador de resultados -->
+        <div class="col-12 text-end mt-2">
+          <span class="badge bg-info fs-6">
+            {{ productos.length }} Resultados
+          </span>
         </div>
       </div>
     </div>
 
+
     <!-- TABLA -->
     <div class="productos-table-container shadow-sm">
-      <div v-if="cargando" class="loading-spinner">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Cargando...</span>
-        </div>
-        <p>Cargando Productos...</p>
+      <!-- SPINNER DE CARGA con mismo estilo que categorías -->
+      <div v-if="cargando" class="loading-overlay">
+        <div class="spinner"></div>
+        <p class="mt-2 text-dark">Cargando Productos...</p>
       </div>
 
       <div v-else-if="productos.length === 0" class="empty-state">
@@ -71,6 +77,7 @@
       </div>
 
       <div v-else class="table-responsive">
+        <!-- tu tabla original -->
         <table class="table table-hover align-middle">
           <thead class="table-light">
             <tr>
@@ -88,7 +95,8 @@
               <td class="text-center">{{ p.id }}</td>
               <td class="text-center">
                 <img v-if="p.image" :src="p.image" alt="Imagen" class="img-thumbnail" width="60" height="60" />
-                <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail" width="60" height="60" />
+                <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail"
+                  width="60" height="60" />
               </td>
               <td class="producto-name">{{ p.name }}</td>
               <td class="producto-descripcion">{{ p.description }}</td>
@@ -110,6 +118,34 @@
           </tbody>
         </table>
       </div>
+
+
+      <!-- PAGINACIÓN -->
+      <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+          <!-- Botón Anterior -->
+          <li class="page-item" :class="{ disabled: paginaActual === 0 }">
+            <button class="page-link" @click="cambiarPagina(paginaActual - 1)">
+              <i class="fas fa-chevron-left me-1"></i> Anterior
+            </button>
+          </li>
+
+          <!-- Botones numéricos -->
+          <li v-for="n in totalPaginas" :key="n" class="page-item" :class="{ active: paginaActual === n - 1 }">
+            <button class="page-link" @click="cambiarPagina(n - 1)">
+              {{ n }}
+            </button>
+          </li>
+
+          <!-- Botón Siguiente -->
+          <li class="page-item" :class="{ disabled: paginaActual >= totalPaginas - 1 }">
+            <button class="page-link" @click="cambiarPagina(paginaActual + 1)">
+              Siguiente <i class="fas fa-chevron-right ms-1"></i>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
     </div>
 
     <!-- MODAL AGREGAR -->
@@ -123,8 +159,10 @@
           <div class="modal-body">
             <div class="text-center mb-3">
               <img v-if="productoNuevo.image" :src="productoNuevo.image" class="img-thumbnail" width="120" />
-              <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail" width="120" />
-              <input type="file" class="form-control mt-2" @change="previsualizarFoto('nuevo', $event)" accept="image/png, image/jpeg" />
+              <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail"
+                width="120" />
+              <input type="file" class="form-control mt-2" @change="previsualizarFoto('nuevo', $event)"
+                accept="image/png, image/jpeg" />
             </div>
             <input v-model="productoNuevo.name" class="form-control mb-2" placeholder="Nombre" />
             <input v-model="productoNuevo.description" class="form-control mb-2" placeholder="Descripción" />
@@ -153,12 +191,15 @@
           <div class="modal-body">
             <div class="text-center mb-3">
               <img v-if="productoEditado.image" :src="productoEditado.image" class="img-thumbnail" width="120" />
-              <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail" width="120" />
-              <input type="file" class="form-control mt-2" @change="previsualizarFoto('editado', $event)" accept="image/png, image/jpeg" />
+              <img v-else src="https://cdn-icons-png.flaticon.com/128/7887/7887812.png" class="img-thumbnail"
+                width="120" />
+              <input type="file" class="form-control mt-2" @change="previsualizarFoto('editado', $event)"
+                accept="image/png, image/jpeg" />
             </div>
             <input v-model="productoEditado.name" class="form-control mb-2" placeholder="Nombre" />
             <input v-model="productoEditado.description" class="form-control mb-2" placeholder="Descripción" />
-            <input v-model.number="productoEditado.price" type="number" class="form-control mb-2" placeholder="Precio" />
+            <input v-model.number="productoEditado.price" type="number" class="form-control mb-2"
+              placeholder="Precio" />
             <select v-model="productoEditado.category.id" class="form-select">
               <option value="0">Seleccione categoría</option>
               <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.name }}</option>
@@ -175,17 +216,17 @@
 </template>
 
 <script>
-import { mostrarAlerta, confirmar } from "@/functions.js";
+import { mostrarAlerta, confirmar, validarRangoDePrecio } from "@/functions.js";
 import Modal from "bootstrap/js/dist/modal";
 import {
-  getProducts,
+  getProductsPaginated,
   getProductById,
-  searchProducts,
-  filterByCategory,
-  filterByPrice,
+  searchProductsPaginated,
   createProduct,
   updateProduct,
   deleteProduct,
+  filterByCategoryPaginated,
+  filterByPricePaginated,
 } from "@/services/products";
 import { getCategories } from "@/services/categories";
 
@@ -202,16 +243,22 @@ export default {
       modalEditar: null,
       filtro: "",
       filtroCategoria: 0,
-      precioMin: 0,
-      precioMax: 0,
+      precioMin: "",
+      precioMax: "",
+      paginaActual: 0,
+      tamañoPagina: 4,
+      totalPaginas: 0,
+      modoFiltro: null,
     };
   },
+
   mounted() {
     this.modalAgregar = new Modal(document.getElementById("modalGuardarProducto"));
     this.modalEditar = new Modal(document.getElementById("modalEditarProducto"));
     this.obtenerProductos();
     this.obtenerCategorias();
   },
+
   methods: {
     previsualizarFoto(tipo, event) {
       const reader = new FileReader();
@@ -234,28 +281,86 @@ export default {
     async obtenerProductos() {
       this.cargando = true;
       try {
-        this.productos = await getProducts();
+        const data = await getProductsPaginated(this.paginaActual, this.tamañoPagina);
+        this.productos = data.content;
+        this.totalPaginas = data.totalPages;
+        this.modoFiltro = null;
+      } catch {
+        mostrarAlerta("Error al cargar los productos", "danger");
       } finally {
         this.cargando = false;
       }
     },
 
-    async obtenerCategorias() {
-      this.categorias = await getCategories();
+    async cambiarPagina(nuevaPagina) {
+      if (nuevaPagina < 0 || nuevaPagina >= this.totalPaginas) return;
+      this.paginaActual = nuevaPagina;
+
+      switch (this.modoFiltro) {
+        case "nombre":
+          await this.filtrarBusqueda(false);
+          break;
+        case "categoria":
+          await this.filtrarPorCategoria(false);
+          break;
+        case "precio":
+          await this.filtrarPorPrecio(false);
+          break;
+        default:
+          await this.obtenerProductos();
+      }
     },
 
-    async filtrarBusqueda() {
-      if (!this.filtro.trim()) return this.obtenerProductos();
-      this.productos = await searchProducts(this.filtro);
+    async filtrarBusqueda(reset = true) {
+      if (!this.filtro.trim()) {
+        this.modoFiltro = null;
+        return this.obtenerProductos();
+      }
+
+      if (reset) this.paginaActual = 0;
+      this.cargando = true;
+
+      try {
+        const data = await searchProductsPaginated(this.filtro, this.paginaActual, this.tamañoPagina);
+        this.productos = data.content;
+        this.totalPaginas = data.totalPages;
+        this.modoFiltro = "nombre";
+      } catch {
+        mostrarAlerta("Error al filtrar por nombre", "danger");
+      } finally {
+        this.cargando = false;
+      }
     },
 
-    async filtrarPorCategoria() {
-      if (this.filtroCategoria == 0) return this.obtenerProductos();
-      this.productos = await filterByCategory(this.filtroCategoria);
+    async filtrarPorCategoria(reset = true) {
+      if (this.filtroCategoria == 0) {
+        this.modoFiltro = null;
+        return this.obtenerProductos();
+      }
+
+      if (reset) this.paginaActual = 0;
+      this.cargando = true;
+
+      try {
+        const data = await filterByCategoryPaginated(this.filtroCategoria, this.paginaActual, this.tamañoPagina);
+        this.productos = data.content;
+        this.totalPaginas = data.totalPages;
+        this.modoFiltro = "categoria";
+      } catch {
+        mostrarAlerta("Error al filtrar por categoría", "danger");
+      } finally {
+        this.cargando = false;
+      }
     },
 
     async filtrarPorPrecio() {
-      this.productos = await filterByPrice(this.precioMin, this.precioMax);
+      if (!validarRangoDePrecio(this.precioMin, this.precioMax)) return;
+
+      try {
+        this.productos = await filterByPricePaginated(this.precioMin, this.precioMax);
+      } catch {
+        mostrarAlerta("Error", "error", "Error al filtrar por precio");
+      }
     },
 
     limpiarFiltros() {
@@ -263,15 +368,30 @@ export default {
       this.filtroCategoria = 0;
       this.precioMin = "";
       this.precioMax = "";
+      this.paginaActual = 0;
+      this.modoFiltro = null;
       this.obtenerProductos();
     },
 
     async guardarProducto() {
       if (!this.validarProducto(this.productoNuevo)) return;
-      await createProduct(this.productoNuevo);
-      mostrarAlerta("Producto guardado exitosamente", "success");
-      this.obtenerProductos();
-      this.modalAgregar.hide();
+
+      try {
+        await createProduct(this.productoNuevo);
+        mostrarAlerta("Producto guardado exitosamente", "success");
+        this.obtenerProductos();
+        this.modalAgregar.hide();
+
+        this.productoNuevo = {
+          name: "",
+          description: "",
+          price: null,
+          image: "",
+          category: { id: 0 },
+        };
+      } catch (error) {
+        mostrarAlerta("Error al guardar el producto", "danger");
+      }
     },
 
     async obtenerPorId(id) {
@@ -295,16 +415,22 @@ export default {
         this.obtenerProductos();
       }
     },
+
+    async obtenerCategorias() {
+      this.categorias = await getCategories();
+    },
   },
 };
 </script>
 
+
 <style>
+/* === ENCABEZADO DE PRODUCTOS === */
 .productos-header {
   text-align: center;
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: white;
+  background: #fff;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
 }
@@ -321,282 +447,138 @@ export default {
   font-size: 1.1rem;
 }
 
-.productos-actions {
+/* === SPINNER DE CARGA === */
+.loading-overlay {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 3rem;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 1rem;
+  justify-content: center;
 }
 
-.btn-primary {
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* === PAGINACIÓN === */
+.pagination-container .btn-pagination {
+  background-color: var(--primary-color);
+  color: #fff;
   border: none;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
+  padding: 0.5rem 1.2rem;
   border-radius: 8px;
+  font-weight: 600;
   transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-primary:hover {
+.pagination-container .btn-pagination:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.pagination-container .btn-pagination:hover:not(:disabled) {
+  background-color: var(--primary-dark);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
 }
 
-.results-badge .badge {
-  font-size: 0.9rem;
-  padding: 0.6rem 1rem;
-  border-radius: 20px;
-}
-
-.productos-table-container {
-  background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
-  overflow: hidden;
-}
-
-.loading-spinner {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-light);
-}
-
-.loading-spinner .spinner-border {
-  width: 3rem;
-  height: 3rem;
-  margin-bottom: 1rem;
-}
-
-.productos-table {
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.productos-table thead {
-  background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-  color: white;
-}
-
-.productos-table th {
-  font-weight: 600;
-  padding: 1rem;
-  text-transform: uppercase;
-  font-size: 0.9rem;
-  letter-spacing: 0.5px;
-}
-
-.producto-row {
-  transition: all 0.2s ease;
-  border-bottom: 1px solid #eee;
-}
-
-.producto-row:hover {
-  background-color: #f8f9fa;
-  transform: translateX(4px);
-}
-
-.producto-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.producto-name {
-  font-weight: 600;
-  color: var(--text-dark);
-}
-
-.producto-descripcion {
-  color: var(--text-light);
-  font-size: 0.9rem;
-  max-width: 250px;
-}
-
-.precio-badge {
-  font-size: 0.9rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 8px;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.action-buttons .btn {
-  border-radius: 6px;
-  padding: 0.4rem 0.8rem;
-  transition: all 0.2s ease;
-}
-
-.action-buttons .btn:hover {
-  transform: translateY(-2px);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-  color: var(--text-light);
-}
-
-.empty-icon {
-  font-size: 4rem;
-  color: #dee2e6;
-  margin-bottom: 1rem;
-}
-
-.empty-state h4 {
-  color: var(--text-dark);
-  margin-bottom: 0.5rem;
-}
-
+/* === MODAL === */
 .modal-content {
   border-radius: 16px;
   border: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
-.modal-header {
-  border-radius: 16px 16px 0 0;
-  padding: 1.2rem 1.5rem;
-}
-
-.modal-title {
-  font-weight: 600;
-}
-
-.modal-body {
+/* === FILTROS DE PRODUCTOS === */
+.productos-filtros {
+  background: #fff;
+  border-radius: 16px;
   padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.modal-footer {
-  border-radius: 0 0 16px 16px;
-  padding: 1.2rem 1.5rem;
+/* === INPUT DE BÚSQUEDA === */
+.search-input {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
 }
 
-.form-label {
-  font-weight: 600;
-  color: var(--text-dark);
-  margin-bottom: 0.5rem;
-}
-
-.form-control,
-.form-select {
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  padding: 0.75rem;
-  transition: all 0.3s ease;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(88, 14, 0, 0.1);
-}
-
-.input-group-text {
-  background-color: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-right: none;
-}
-
-/* Botón agregar producto más corto */
-.btn-guardar {
-  padding: 0.25rem 0.6rem; /* más corto */
-  font-size: 0.8rem;       /* texto más chico */
-  border-radius: 12px;
+.btn-buscar {
   background-color: var(--primary-color);
-  color: white;
-  transition: all 0.3s ease;
+  color: #fff;
+  transition: 0.3s;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.btn-buscar:hover {
+  background-color: var(--primary-dark);
+}
+
+/* === BOTONES === */
+.btn-guardar,
+.btn-success,
+.btn-secondary {
+  border-radius: 12px;
+  font-weight: 600;
+  transition: 0.3s ease;
+}
+
+/* Botón principal */
+.btn-guardar {
+  background-color: var(--primary-color);
+  color: #fff;
 }
 
 .btn-guardar:hover {
   background-color: var(--primary-dark);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
 }
 
-/* Búsqueda personalizada (input más largo) */
-.search-group {
-  display: flex;
-  max-width: 400px; /* más ancho */
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.search-group .search-input {
-  flex: 1;
-  border: 1px solid var(--primary-color);
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  padding: 0.5rem 0.75rem;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.search-group .search-input:focus {
-  box-shadow: 0 0 6px rgba(88, 14, 0, 0.3);
-  border-color: var(--primary-dark);
-}
-
-/* Botón buscar */
-.btn-buscar {
-  background-color: var(--primary-color);
-  border: none;
+/* Botones de acción */
+.btn-success {
+  background-color: #28a745;
   color: #fff;
-  font-weight: 600;
-  border-radius: 0 8px 8px 0;
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
-.btn-buscar:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.3);
+.btn-success:hover {
+  background-color: #218838;
 }
 
-/* Badge resultados */
-.results-badge .badge {
-  font-size: 0.9rem;
+.btn-secondary {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+/* === CAMPOS Y ETIQUETAS === */
+.input-precio {
+  border-radius: 12px;
+}
+
+.badge {
   padding: 0.6rem 1rem;
-  border-radius: 20px;
-}
-
-
-
-
-
-@media (max-width: 768px) {
-  .productos-container {
-    padding: 1rem;
-  }
-
-  .productos-actions {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .producto-descripcion {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .modal-dialog {
-    margin: 1rem;
-  }
+  font-weight: 600;
+  border-radius: 12px;
 }
 </style>

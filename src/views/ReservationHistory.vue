@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import { getReservations } from "@/services/reservation";
+import { getReservationHistoryByCustomer } from "@/services/reservation";
 
 export default {
   name: "ReservationHistory",
@@ -65,7 +65,7 @@ export default {
     return {
       reservations: [],
       loading: true,
-      visibleCount: 4,
+      visibleCount: 3,
       user: JSON.parse(localStorage.getItem("user")) || {},
       refreshInterval: null,
     };
@@ -86,24 +86,22 @@ export default {
           return;
         }
 
-        const allReservations = await getReservations();
+        // 👇 Ahora el servicio ya se encarga de traer solo las reservas del usuario
+        const reservations = await getReservationHistoryByCustomer(this.user.id);
 
-        if (!Array.isArray(allReservations)) {
+        if (!Array.isArray(reservations)) {
           this.loading = false;
           return;
         }
 
-        // Filtra por cliente y ordena de la más reciente a la más antigua
-        const filtered = allReservations
-          .filter((r) => r.customer?.id === this.user.id)
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Ordenamos las reservas de más reciente a más antigua
+        const sorted = reservations.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        // Solo actualizar si hay cambios reales
-        if (JSON.stringify(this.reservations) !== JSON.stringify(filtered)) {
-          this.reservations = filtered;
+        // Evitamos sobreescribir si no hay cambios
+        if (JSON.stringify(this.reservations) !== JSON.stringify(sorted)) {
+          this.reservations = sorted;
         }
       } catch (error) {
-        // No mostrar alertas si el backend está caído — solo log silencioso
         console.warn("⚠️ No se pudo obtener el historial de reservas:", error.message);
       } finally {
         this.loading = false;
@@ -137,10 +135,10 @@ export default {
   async mounted() {
     await this.fetchReservations();
 
-    // Refrescar automáticamente cada 5 segundos
+    // Refresco automático (puedes subirlo a 30s si no cambia tanto)
     this.refreshInterval = setInterval(async () => {
       await this.fetchReservations();
-    }, 5000);
+    }, 10000);
   },
 
   beforeUnmount() {
@@ -148,6 +146,7 @@ export default {
   },
 };
 </script>
+
 
 
 <style scoped>

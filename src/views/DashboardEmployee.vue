@@ -99,7 +99,7 @@ import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
 import { countAllOrders } from "@/services/orders";
 import { countAllProducts } from "@/services/products";
 import { countAvailableTables } from "@/services/tables";
-import { countActiveReservationsByCustome } from "@/services/reservation";
+import { countActiveReservationsByCustomer } from "@/services/reservation";
 
 export default {
   name: "EmployeeDashboardLayout",
@@ -132,7 +132,7 @@ export default {
         this.pedidosCount = await countAllOrders();
         this.mesasCount = await countAvailableTables();
         if (this.customerId) {
-          this.reservasCount = await countActiveReservationsByCustome(this.customerId);
+          this.reservasCount = await countActiveReservationsByCustomer(this.customerId);
         } else {
           this.reservasCount = 0;
         }
