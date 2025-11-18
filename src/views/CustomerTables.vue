@@ -1,12 +1,12 @@
 <template>
     <div class="mesas-container">
-        <h2 class="mb-5 text-center fw-bold display-6">
+        <h2 class="mb-5 text-center fw-bold display-6 titulo-principal">
             Mesas Disponibles
         </h2>
 
         <!-- CARGANDO -->
         <div v-if="cargando" class="text-center my-5">
-            <div class="spinner-border spinner-lg text-primary" role="status">
+            <div class="spinner-border spinner-lg text-acento" role="status">
                 <span class="visually-hidden">Cargando...</span>
             </div>
             <p class="mt-3 fs-6 text-muted">Cargando mesas...</p>
@@ -18,12 +18,15 @@
         </div>
 
         <!-- LISTADO DE MESAS -->
-        <div v-else class="row g-4">
+        <div v-else class="row g-4 justify-content-center">
             <div v-for="mesa in mesas" :key="mesa.id" class="col-sm-6 col-md-4 col-lg-3">
-                <div class="mesa-card card p-4 shadow-sm text-center" @click="reservarMesa(mesa)">
-                    <h5 class="mesa-number mb-3">Mesa {{ mesa.number }}</h5>
+                <div class="mesa-card card text-center shadow-sm" @click="reservarMesa(mesa)">
+                    <div class="icono-mesa mb-3">
+                        <i class="fas fa-chair"></i>
+                    </div>
+                    <h5 class="mesa-number mb-2">Mesa {{ mesa.number }}</h5>
                     <p class="mesa-capacidad mb-4">Capacidad: {{ mesa.capacity }} personas</p>
-                    <button class="btn btn-primary w-100">
+                    <button class="btn btn-acento">
                         Reservar
                     </button>
                 </div>
@@ -36,7 +39,7 @@
                 <div class="modal-content modal-animate shadow-lg rounded-4">
 
                     <!-- Encabezado -->
-                    <div class="modal-header bg-primary text-white">
+                    <div class="modal-header bg-verde text-white">
                         <h5 class="modal-title">Reservar Mesa</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
@@ -60,7 +63,7 @@
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                             Cancelar
                         </button>
-                        <button type="button" class="btn btn-primary" @click="confirmarReserva">
+                        <button type="button" class="btn btn-verde" @click="confirmarReserva">
                             Confirmar
                         </button>
                     </div>
@@ -68,7 +71,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </template>
 
@@ -76,7 +78,7 @@
 import { getTables } from "@/services/tables";
 import { createReservation } from "@/services/reservation";
 import Modal from "bootstrap/js/dist/modal";
-import { mostrarAlerta } from "@/functions.js"; // Importa tu función de alertas
+import { mostrarAlerta } from "@/functions.js";
 
 export default {
     name: "CustomerTables",
@@ -87,7 +89,7 @@ export default {
             mesaSeleccionada: null,
             modalReserva: null,
             fechaReserva: null,
-            user: JSON.parse(localStorage.getItem("user")) || {}, // Usuario logueado
+            user: JSON.parse(localStorage.getItem("user")) || {},
         };
     },
     async mounted() {
@@ -155,7 +157,6 @@ export default {
 
                 await createReservation(reserva);
 
-                // Mensaje con saltos de línea
                 mostrarAlerta(
                     `Mesa: ${this.mesaSeleccionada.number}\nFecha: ${this.formatearFecha(reserva.date)}`,
                     "success"
@@ -165,42 +166,56 @@ export default {
 
             } catch (error) {
                 console.error("Error al crear reserva:", error.response ? error.response.data : error);
-                mostrarAlerta("No se pudo realizar la reserva. Revisa la consola para más detalles.", "error");
+                mostrarAlerta("No se pudo realizar la reserva.", "error");
             } finally {
                 this.modalReserva.hide();
                 this.mesaSeleccionada = null;
                 this.fechaReserva = null;
             }
         },
-
     },
 };
 </script>
 
-
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 .mesas-container {
+    font-family: 'Poppins', sans-serif;
     padding: 3rem 2rem;
-    background: #f8f9fa;
+    background: #f7f7f7;
     min-height: 100vh;
 }
 
+.titulo-principal {
+    color: #580e00;
+    letter-spacing: 1px;
+}
+
 .mesa-card {
-    border-radius: 1rem;
+    border-radius: 1.25rem;
     background: #ffffff;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
     padding: 2rem 1.5rem;
+    transition: all 0.3s ease;
     cursor: pointer;
+    border: 1px solid rgba(88, 14, 0, 0.08);
 }
 
 .mesa-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 24px rgba(88, 14, 0, 0.25);
+    border-color: #580e00;
+}
+
+.icono-mesa {
+    font-size: 2.2rem;
+    color: #580e00;
 }
 
 .mesa-number {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
+    color: #333;
 }
 
 .mesa-capacidad {
@@ -208,31 +223,55 @@ export default {
     color: #6c757d;
 }
 
-.btn-primary {
-    width: 100%;
+.btn-acento {
+    background-color: #580e00;
+    color: #fff;
     font-weight: 600;
+    border: none;
     border-radius: 50px;
     padding: 0.6rem 0;
+    transition: background-color 0.3s ease;
+}
+
+.btn-acento:hover {
+    background-color: #731200;
+}
+
+.text-acento {
+    color: #580e00 !important;
+}
+
+/* VERDE MODAL */
+.bg-verde {
+    background-color: #1b7b3a !important;
+}
+
+.btn-verde {
+    background-color: #1b7b3a;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 50px;
+    padding: 0.6rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-verde:hover {
+    background-color: #23994a;
 }
 
 .modal-content {
-    border-radius: 1rem;
+    border-radius: 1.25rem;
     border: none;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    border-bottom: none;
-    border-radius: 1rem 1rem 0 0;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
 
 .modal-footer {
     border-top: none;
+    display: flex;
     justify-content: flex-end;
-    display: flex;       /* Asegura que sea flex */
-    gap: 1rem;           /* Espacio entre botones */
+    gap: 1rem;
 }
-
 
 .modal-animate {
     animation: fadeInUp 0.4s ease forwards;

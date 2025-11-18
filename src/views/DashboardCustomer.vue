@@ -1,16 +1,25 @@
 <template>
-  <!-- Header -->
-  <HeaderAuthenticated :username="username" :roles="roles" :active-role="activeRole" />
-  
   <div>
+    <!-- Header -->
+    <HeaderAuthenticated 
+      :username="username" 
+      :roles="roles" 
+      :active-role="activeRole" 
+    />
+
     <div v-if="isCustomer" class="dashboard-container">
       <!-- Sidebar -->
       <aside class="dashboard-sidebar">
         <nav>
           <ul>
             <li>
+              <router-link to="/dashboard-customer/notifications">
+                <i class="fas fa-bell me-2"></i> Notificaciones
+              </router-link>
+            </li>
+            <li>
               <router-link to="/dashboard-customer/menu">
-                <i class="fas fa-box-open me-2"></i> Menu
+                <i class="fas fa-box-open me-2"></i> Menú
               </router-link>
             </li>
             <li>
@@ -19,7 +28,7 @@
               </router-link>
             </li>
             <li>
-              <router-link to="/dashboard-customer/orders">
+              <router-link to="/dashboard-customer/history-orders">
                 <i class="fas fa-clipboard-list me-2"></i> Mis Pedidos
               </router-link>
             </li>
@@ -46,6 +55,7 @@
         <section class="dashboard-main">
           <!-- Cards resumen -->
           <div class="cards-container">
+            <!-- Productos -->
             <div class="summary-card card-products">
               <i class="fas fa-box-open card-icon"></i>
               <div class="card-info">
@@ -54,6 +64,7 @@
               </div>
             </div>
 
+            <!-- Pedidos -->
             <div class="summary-card card-orders">
               <i class="fas fa-clipboard-list card-icon"></i>
               <div class="card-info">
@@ -62,6 +73,7 @@
               </div>
             </div>
 
+            <!-- Reservas -->
             <div class="summary-card card-reservations">
               <i class="fas fa-calendar-check card-icon"></i>
               <div class="card-info">
@@ -87,7 +99,7 @@
 <script>
 import HeaderAuthenticated from '@/components/HeaderAuthenticated.vue';
 import { countAllProducts } from "@/services/products";
-import { countOrdersByCustomer } from "@/services/orders"; 
+import { countOrdersByCustomer } from "@/services/orders";
 import { countActiveReservationsByCustome } from "@/services/reservation";
 
 export default {
@@ -96,8 +108,8 @@ export default {
   data() {
     const user = JSON.parse(localStorage.getItem("user")) || {};
     return {
-      userId: user.id || null,
       username: user.userName || "Cliente",
+      userId: user.id || null,
       roles: user.roles || [],
       productosCount: 0,
       pedidosCount: 0,
@@ -118,33 +130,31 @@ export default {
       localStorage.removeItem("activeRole");
       this.$router.push("/select-role");
     },
-
     async cargarProductos() {
       try {
         this.productosCount = await countAllProducts();
       } catch (error) {
-        console.error("Error cargando productos:", error);
+        console.error("Error al cargar productos:", error);
       }
     },
-
     async cargarPedidos() {
-      if (!this.userId) return;
       try {
-        this.pedidosCount = await countOrdersByCustomer(this.userId);
+        if (this.userId) {
+          this.pedidosCount = await countOrdersByCustomer(this.userId);
+        }
       } catch (error) {
-        console.error("Error cargando pedidos:", error);
+        console.error("Error al cargar pedidos:", error);
       }
     },
-
     async cargarReservas() {
-      if (!this.userId) return;
       try {
-        this.reservasCount = await countActiveReservationsByCustome(this.userId);
+        if (this.userId) {
+          this.reservasCount = await countActiveReservationsByCustome(this.userId);
+        }
       } catch (error) {
-        console.error("Error cargando reservas:", error);
+        console.error("Error al cargar reservas:", error);
       }
     },
-
     async cargarDatos() {
       await Promise.all([
         this.cargarProductos(),
@@ -152,7 +162,6 @@ export default {
         this.cargarReservas()
       ]);
     },
-
     iniciarAutoRefresh() {
       this.intervalId = setInterval(this.cargarDatos, 5000);
     }
@@ -171,7 +180,6 @@ export default {
 };
 </script>
 
-
 <style scoped>
 .dashboard-container {
   display: flex;
@@ -179,8 +187,9 @@ export default {
   background: #f5f5f5;
 }
 
+/* --- SIDEBAR --- */
 .dashboard-sidebar {
-  width: 200px;
+  width: 180px;
   background: #580e00;
   color: white;
   padding: 1rem;
@@ -212,10 +221,9 @@ export default {
 .dashboard-sidebar a.router-link-active {
   background: rgba(255, 255, 255, 0.15);
   font-weight: 700;
-  text-decoration: none;
 }
 
-/* Contenido */
+/* --- CONTENIDO PRINCIPAL --- */
 .dashboard-content {
   flex: 1;
   display: flex;
@@ -233,7 +241,7 @@ export default {
   padding: 2rem;
 }
 
-/* Cards resumen */
+/* --- CARDS --- */
 .cards-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -261,10 +269,17 @@ export default {
   margin-right: 1rem;
 }
 
-/* Colores específicos */
-.card-products { background: #FF8C00; }
-.card-orders { background: #FF6B35; }
-.card-reservations { background: #3498DB; }
+.card-products {
+  background: #FF8C00;
+}
+
+.card-orders {
+  background: #FF6B35;
+}
+
+.card-reservations {
+  background: #3498DB;
+}
 
 .card-info h3 {
   margin: 0;
@@ -277,6 +292,7 @@ export default {
   opacity: 0.8;
 }
 
+/* --- BOTÓN CAMBIAR ROL --- */
 .btn-role-switch {
   background: linear-gradient(135deg, #580e00, #7a2615);
   color: white;
@@ -292,18 +308,12 @@ export default {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
 }
-
 .btn-role-switch:hover {
   background: linear-gradient(135deg, #7a2615, #a8321e);
   transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
 }
 
-.btn-role-switch i {
-  font-size: 1rem;
-}
-
-/* Responsive */
+/* --- RESPONSIVE --- */
 @media (max-width: 1024px) {
   .dashboard-container {
     flex-direction: column;
@@ -313,8 +323,6 @@ export default {
     width: 100%;
     flex-direction: row;
     overflow-x: auto;
-    margin-right: 0;
-    border-radius: 0;
     padding: 0.5rem;
   }
 
@@ -340,17 +348,6 @@ export default {
   }
 
   .card-info p {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .cards-container {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-sidebar a {
-    padding: 0.5rem;
     font-size: 0.8rem;
   }
 }

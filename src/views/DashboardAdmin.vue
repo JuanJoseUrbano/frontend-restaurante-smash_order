@@ -21,6 +21,11 @@
               </router-link>
             </li>
             <li>
+              <router-link to="/dashboard-admin/reservations">
+                <i class="fas fa-calendar-check me-2"></i> Reservas
+              </router-link>
+            </li>
+            <li>
               <router-link to="/dashboard-admin/products">
                 <i class="fas fa-box-open me-2"></i> Productos
               </router-link>
