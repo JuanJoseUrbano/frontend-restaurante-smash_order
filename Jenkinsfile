@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_REGISTRY = 'ghcr.io'
         DOCKER_IMAGE = 'juanjoseurbano/frontend-restaurante-smash_order'
-        DOCKER_CREDENTIALS = 'ghcr-credentials'
+        DOCKER_CREDENTIALS = 'ghcr-credentials'  // Debe coincidir con el ID en Jenkins
     }
     
     stages {
@@ -13,59 +13,14 @@ pipeline {
                 echo '📥 Descargando código fuente...'
                 checkout scm
                 sh '''
-                    echo "📂 Workspace actual: ${WORKSPACE}"
-                    echo "📄 Contenido del workspace tras checkout:"
-                    ls -la ${WORKSPACE}
+                    echo "📂 Workspace: ${WORKSPACE}"
+                    echo "📄 Archivos disponibles:"
+                    ls -la
                 '''
             }
         }
         
-        stage('Install & Build') {
-            steps {
-                sh """
-                    echo "🚀 Trabajando en el workspace raíz"
-                    echo "📦 Archivos disponibles:"
-                    ls -la
-                    
-                    echo "🧹 Limpiando directorios problemáticos..."
-                    rm -rf frontend-restaurante-smash_order frontend-restaurante-smash_order@tmp || true
-                    
-                    echo "📄 Verificando package.json:"
-                    if [ -f package.json ]; then
-                        echo "✅ package.json encontrado"
-                        cat package.json | head -n 10
-                    else
-                        echo "❌ package.json NO encontrado"
-                        exit 1
-                    fi
-                    
-                    echo "🐳 Ejecutando build dentro del contenedor Node..."
-                    docker run --rm -v \${WORKSPACE}:/app -w /app node:22-alpine sh -c '
-                        echo "📦 Archivos en /app:"
-                        ls -la /app
-                        
-                        echo "📋 Verificando package.json en contenedor:"
-                        cat /app/package.json | head -n 10
-                        
-                        if [ -f package-lock.json ]; then
-                            echo "📦 Ejecutando npm ci..."
-                            npm ci
-                        else
-                            echo "📦 Ejecutando npm install..."
-                            npm install
-                        fi
-                        
-                        echo "🏗️ Ejecutando build..."
-                        npm run build
-                        
-                        echo "✅ Build completado. Verificando dist:"
-                        ls -la dist/ || ls -la build/ || echo "Directorio de salida no encontrado"
-                    '
-                """
-            }
-        }
-        
-        stage('Build & Tag Image') {
+        stage('Build & Tag Docker Image') {
             steps {
                 script {
                     def imageTag = "${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
@@ -83,17 +38,33 @@ pipeline {
             }
         }
         
-        stage('Push Image') {
+        stage('Push to GitHub Container Registry') {
             steps {
                 script {
-                    echo "📤 Subiendo imagen a GitHub Container Registry..."
+                    echo "📤 Subiendo imagen a GHCR..."
+                    
+                    // Método 1: Usando withRegistry (recomendado)
                     docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDENTIALS) {
                         sh """
                             docker push ${env.IMAGE_TAG}
                             docker push ${env.LATEST_TAG}
                         """
                     }
-                    echo "✅ Imagen subida exitosamente: ${env.IMAGE_TAG}"
+                    
+                    echo "✅ Imagen subida: ${env.IMAGE_TAG}"
+                    echo "✅ Tag latest: ${env.LATEST_TAG}"
+                }
+            }
+        }
+        
+        stage('Cleanup Local Images') {
+            steps {
+                script {
+                    echo "🧹 Limpiando imágenes locales..."
+                    sh """
+                        docker rmi ${env.IMAGE_TAG} || true
+                        docker rmi ${env.LATEST_TAG} || true
+                    """
                 }
             }
         }
@@ -102,9 +73,10 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline ejecutado exitosamente!'
+            echo "🎉 Imagen disponible en: ${DOCKER_REGISTRY}/${DOCKER_IMAGE}"
         }
         failure {
-            echo '❌ Error en el build.'
+            echo '❌ Pipeline falló. Revisa los logs.'
         }
         always {
             echo '🧹 Limpiando workspace...'
