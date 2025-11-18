@@ -1,4 +1,3 @@
-// src/services/tables.js
 import api from "./api";
 
 export async function getTables() {
@@ -36,4 +35,14 @@ export async function deleteTable(id) {
 export async function countAvailableTables() {
   const response = await api.get("/tables/available/count");
   return response.data;
+}
+
+export async function getTablesPaginated(page = 0, size = 5) {
+  const res = await api.get(`/tables/paginated?page=${page}&size=${size}`);
+  return res.data;
+}
+
+export async function getTablesByStatusPaginated(status, page = 0, size = 5) {
+  const res = await api.get(`/tables/status-paginated/${status}?page=${page}&size=${size}`);
+  return res.data;
 }

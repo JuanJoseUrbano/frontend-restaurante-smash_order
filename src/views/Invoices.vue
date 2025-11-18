@@ -16,7 +16,12 @@
         </div>
         <div class="col-md-auto">
           <div class="input-group search-small">
-            <input type="text" class="form-control search-input" v-model="filtroRecibo" placeholder="Buscar recibo" />
+            <input
+              type="text"
+              class="form-control search-input"
+              v-model="filtroRecibo"
+              placeholder="Buscar recibo"
+            />
             <button @click="buscarPorRecibo" class="btn btn-buscar">
               <i class="fas fa-search"></i>
             </button>
@@ -44,17 +49,19 @@
 
     <!-- TABLA PAGOS -->
     <div class="pagos-table-container shadow-sm">
-      <div v-if="cargando" class="loading-spinner">
-        <div class="spinner-border text-primary" role="status">
+      <div v-if="cargando" class="loading-overlay">
+        <div class="spinner" role="status">
           <span class="visually-hidden">Cargando...</span>
         </div>
         <p>Cargando Pagos...</p>
       </div>
+
       <div v-else-if="pagos.length === 0" class="empty-state">
         <i class="fas fa-money-check-alt empty-icon"></i>
         <h4>No hay pagos registrados</h4>
         <p>Agrega un pago para empezar</p>
       </div>
+
       <div v-else class="table-responsive">
         <table class="table table-hover align-middle">
           <thead class="table-light">
@@ -75,14 +82,25 @@
               <td class="text-center">{{ p.order?.customer?.name }}</td>
               <td class="text-center">{{ p.paymentMethod?.name }}</td>
               <td class="text-center">${{ p.total.toLocaleString() }}</td>
-              <td class="text-center">{{ !p.paymentDate || p.paymentDate.startsWith('1969-12-31') ? 'Sin pago' : formatDate(p.paymentDate) }}</td>
+              <td class="text-center">
+                {{ !p.paymentDate || p.paymentDate.startsWith('1969-12-31')
+                  ? 'Sin pago'
+                  : formatDate(p.paymentDate) }}
+              </td>
               <td class="text-center">{{ p.receiptNumber }}</td>
               <td class="text-center">
-                <span :class="['badge fs-6',
-                  p.status === 'PAID' ? 'bg-success' :
-                    p.status === 'PENDING' ? 'bg-warning text-dark' :
-                      p.status === 'CANCELLED' ? 'bg-danger' :
-                        'bg-secondary']">
+                <span
+                  :class="[
+                    'badge fs-6',
+                    p.status === 'PAID'
+                      ? 'bg-success'
+                      : p.status === 'PENDING'
+                      ? 'bg-warning text-dark'
+                      : p.status === 'CANCELLED'
+                      ? 'bg-danger'
+                      : 'bg-secondary'
+                  ]"
+                >
                   {{ traducirEstado(p.status) }}
                 </span>
               </td>
@@ -94,7 +112,6 @@
                   <button class="btn btn-sm btn-outline-info me-2" @click="generarPDF(p)">
                     <i class="fas fa-file-pdf"></i>
                   </button>
-
                   <button class="btn btn-sm btn-outline-danger" @click="eliminarPago(p.id)">
                     <i class="fas fa-trash-alt"></i>
                   </button>
@@ -103,6 +120,27 @@
             </tr>
           </tbody>
         </table>
+<!-- PAGINACIÓN -->
+<div class="pagination-container text-center my-4">
+  <button
+    class="btn-pagination me-2"
+    @click="cambiarPagina(paginaActual - 1)"
+    :disabled="paginaActual === 0"
+  >
+    <i class="fas fa-chevron-left"></i>
+  </button>
+  <span class="pagination-info">
+    Página <strong>{{ paginaActual + 1 }}</strong> de <strong>{{ totalPaginas }}</strong>
+  </span>
+  <button
+    class="btn-pagination ms-2"
+    @click="cambiarPagina(paginaActual + 1)"
+    :disabled="paginaActual >= totalPaginas - 1"
+  >
+    <i class="fas fa-chevron-right"></i>
+  </button>
+</div>
+
       </div>
     </div>
 
@@ -208,7 +246,7 @@
 import { mostrarAlerta, confirmar } from "@/functions.js";
 import { jsPDF } from "jspdf";
 import Modal from "bootstrap/js/dist/modal";
-import { getInvoices, getInvoiceById, createInvoice, updateInvoice, deleteInvoice } from "@/services/invoices.js";
+import { getInvoicesPaginated, getInvoiceById, createInvoice, updateInvoice, deleteInvoice } from "@/services/invoices.js";
 import { getPayments } from "@/services/paymentMethods.js";
 import { getOrdersWithoutInvoice } from "@/services/orders.js";
 
@@ -231,8 +269,13 @@ export default {
       resultadosPedido: [],
       busquedaPedidoEdit: "",
       resultadosPedidoEdit: [],
+      paginaActual: 0,
+      tamañoPagina: 5,
+      totalPaginas: 0,
+      actualizandoPagos: false
     };
   },
+
   async mounted() {
     this.modalAgregar = new Modal(this.$refs.modalAgregar);
     this.modalEditar = new Modal(this.$refs.modalEditar);
@@ -240,35 +283,167 @@ export default {
     await this.cargarMetodos();
     await this.cargarPedidos();
   },
-  methods: {
 
+  methods: {
     async obtenerPagos() {
+  this.cargando = true;
+  try {
+    let data;
+    
+    // Si hay un filtro activo, paginar desde los resultados guardados
+    if (this.filtroActivo && this.todosLosResultadosFiltrados.length > 0) {
+      const inicio = this.paginaActual * this.tamañoPagina;
+      const fin = inicio + this.tamañoPagina;
+      const paginados = this.todosLosResultadosFiltrados.slice(inicio, fin);
+      
+      data = {
+        content: paginados,
+        totalPages: Math.ceil(this.todosLosResultadosFiltrados.length / this.tamañoPagina),
+      };
+    } else if (!this.filtroActivo) {
+      // Sin filtros, paginación normal desde el backend
+      data = await getInvoicesPaginated(this.paginaActual, this.tamañoPagina);
+    } else {
+      data = { content: [], totalPages: 1 };
+    }
+    
+    this.pagos = data.content || [];
+    this.pagosOriginales = data.content || [];
+    this.totalPaginas = data.totalPages || 1;
+  } catch (error) {
+    console.error(error);
+    mostrarAlerta("Error al cargar los pagos", "danger");
+    this.pagos = [];
+    this.pagosOriginales = [];
+  } finally {
+    this.cargando = false;
+  }
+},
+
+// PASO 3: REEMPLAZA cambiarPagina()
+async cambiarPagina(nuevaPagina) {
+  if (nuevaPagina < 0 || nuevaPagina >= this.totalPaginas) return;
+  this.paginaActual = nuevaPagina;
+  await this.obtenerPagos();
+},
+
+// PASO 4: REEMPLAZA buscarPorRecibo()
+async buscarPorRecibo() {
+  if (!this.filtroRecibo.trim()) {
+    this.filtroActivo = null;
+    this.todosLosResultadosFiltrados = [];
+    this.filtroEstado = "";
+    this.paginaActual = 0;
+    return this.obtenerPagos();
+  }
+
+  this.cargando = true;
+  try {
+    // Obtener todos los pagos para filtrar localmente
+    // (asumiendo que no hay endpoint específico para buscar por recibo)
+    const data = await getInvoicesPaginated(0, 1000); // Obtener muchos registros
+    const todosLosPagos = data.content || [];
+    
+    // Filtrar por número de recibo
+    this.todosLosResultadosFiltrados = todosLosPagos.filter(p =>
+      p.receiptNumber?.toLowerCase().includes(this.filtroRecibo.toLowerCase())
+    );
+    
+    this.filtroActivo = 'recibo';
+    this.filtroEstado = "";
+    this.paginaActual = 0;
+    
+    await this.obtenerPagos();
+    
+    if (this.todosLosResultadosFiltrados.length === 0) {
+      mostrarAlerta("No se encontraron pagos con ese número de recibo", "info");
+    }
+  } catch (error) {
+    console.error("Error buscando por recibo:", error);
+    mostrarAlerta("Error al buscar por recibo", "danger");
+    this.pagos = [];
+    this.todosLosResultadosFiltrados = [];
+  } finally {
+    this.cargando = false;
+  }
+},
+
+// PASO 5: REEMPLAZA filtrarPorEstado()
+async filtrarPorEstado() {
+  if (!this.filtroEstado) {
+    this.filtroActivo = null;
+    this.todosLosResultadosFiltrados = [];
+    this.filtroRecibo = "";
+    this.paginaActual = 0;
+    return this.obtenerPagos();
+  }
+
+  this.cargando = true;
+  try {
+    // Obtener todos los pagos para filtrar localmente
+    const data = await getInvoicesPaginated(0, 1000); // Obtener muchos registros
+    const todosLosPagos = data.content || [];
+    
+    // Filtrar por estado
+    this.todosLosResultadosFiltrados = todosLosPagos.filter(p => 
+      p.status === this.filtroEstado
+    );
+    
+    this.filtroActivo = 'estado';
+    this.filtroRecibo = "";
+    this.paginaActual = 0;
+    
+    await this.obtenerPagos();
+    
+    if (this.todosLosResultadosFiltrados.length === 0) {
+      mostrarAlerta("No se encontraron pagos con ese estado", "info");
+    }
+  } catch (error) {
+    console.error("Error filtrando por estado:", error);
+    mostrarAlerta("Error al filtrar por estado", "danger");
+    this.pagos = [];
+    this.todosLosResultadosFiltrados = [];
+  } finally {
+    this.cargando = false;
+  }
+},
+
+// PASO 6: REEMPLAZA limpiarFiltros()
+async limpiarFiltros() {
+  this.filtroRecibo = "";
+  this.filtroEstado = "";
+  this.filtroActivo = null;
+  this.todosLosResultadosFiltrados = [];
+  this.paginaActual = 0;
+  
+  await this.obtenerPagos();
+  mostrarAlerta("Filtros limpiados", "success");
+},
+
+
+    async cargarMetodos() {
       this.cargando = true;
       try {
-        const data = await getInvoices();
-        this.pagosOriginales = data;
-        this.pagos = [...data];
+        this.metodos = await getPayments();
       } catch {
-        mostrarAlerta("Error al cargar los pagos", "danger");
+        mostrarAlerta("Error al cargar los métodos de pago", "danger");
       } finally {
         this.cargando = false;
       }
     },
 
-    async cargarMetodos() {
-      this.cargando = true;
-      try { this.metodos = await getPayments(); }
-      catch { mostrarAlerta("Error al cargar los métodos de pago", "danger"); }
-      finally { this.cargando = false; }
-    },
-
     async cargarPedidos() {
       this.cargando = true;
-      try { this.pedidos = await getOrdersWithoutInvoice(); }
-      catch { mostrarAlerta("Error al cargar los pedidos", "danger"); }
-      finally { this.cargando = false; }
+      try {
+        this.pedidos = await getOrdersWithoutInvoice();
+      } catch {
+        mostrarAlerta("Error al cargar los pedidos", "danger");
+      } finally {
+        this.cargando = false;
+      }
     },
 
+    // === CRUD ===
     abrirModalAgregar() {
       this.pagoNuevo = { orderId: "", paymentMethodId: "", status: "PENDING" };
       this.busquedaPedido = "";
@@ -312,11 +487,12 @@ export default {
         this.busquedaPedidoEdit = `#${p.order?.id} - ${p.order?.customer?.name} - Mesa ${p.order?.table?.number}`;
         this.resultadosPedidoEdit = [];
         this.modalEditar.show();
-      } catch { mostrarAlerta("Error al obtener el pago", "danger"); }
+      } catch {
+        mostrarAlerta("Error al obtener el pago", "danger");
+      }
     },
 
     async actualizarPago() {
-      // Validación básica de campos requeridos
       if (!this.pagoEditado.orderId || !this.pagoEditado.paymentMethodId || !this.pagoEditado.receiptNumber) {
         mostrarAlerta("Completa todos los campos", "warning");
         return;
@@ -330,16 +506,9 @@ export default {
       };
 
       try {
-        console.log("Body enviado:", body);
         await updateInvoice(this.pagoEditado.id, body);
-
-
         mostrarAlerta("Pago actualizado correctamente", "success");
-
-        // Actualiza la lista en segundo plano sin duplicar llamadas
         await this.actualizarListaPagos();
-
-        // Cierra el modal después de actualizar
         this.modalEditar.hide();
       } catch (error) {
         console.error("Error al actualizar el pago:", error);
@@ -348,20 +517,13 @@ export default {
     },
 
     async actualizarListaPagos() {
-      if (this.actualizandoPagos) return; // Previene ejecuciones múltiples simultáneas
-
+      if (this.actualizandoPagos) return;
       this.actualizandoPagos = true;
       try {
-        // Obtiene los pagos actualizados desde el backend
         await this.obtenerPagos();
-
-        // Aplica filtros si el usuario está filtrando por estado o método
-        if (typeof this.aplicarFiltros === "function") {
-          this.aplicarFiltros();
-        }
+        if (typeof this.aplicarFiltros === "function") this.aplicarFiltros();
       } catch (error) {
         console.error("Error actualizando la lista de pagos:", error);
-        mostrarAlerta("No se pudo actualizar la lista de pagos", "danger");
       } finally {
         this.actualizandoPagos = false;
       }
@@ -375,60 +537,47 @@ export default {
           mostrarAlerta("Pago eliminado correctamente", "success");
           await this.obtenerPagos();
         }
-      } catch { mostrarAlerta("Error al eliminar el pago", "danger"); }
+      } catch {
+        mostrarAlerta("Error al eliminar el pago", "danger");
+      }
     },
+
+    // === PDF ===
     generarPDF(pago) {
       const doc = new jsPDF();
-
       const img = new Image();
       img.src = require("../assets/logo_smash_order.png");
       img.onload = () => {
-        doc.addImage(img, 'PNG', 20, 10, 40, 20);
-
+        doc.addImage(img, "PNG", 20, 10, 40, 20);
         doc.setTextColor("#580e00");
         doc.setFontSize(20);
         doc.setFont("helvetica", "bold");
         doc.text("Comprobante de Pago", 105, 40, null, null, "center");
 
         doc.setDrawColor("#580e00");
-        doc.setLineWidth(0.5);
         doc.line(20, 45, 190, 45);
 
         doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
         doc.setTextColor(0, 0, 0);
         doc.text(`# Pedido: ${pago.order.id}`, 20, 55);
         doc.text(`Cliente: ${pago.order?.customer?.name || "-"}`, 20, 65);
         doc.text(`Mesa: ${pago.order?.table?.number || "-"}`, 20, 75);
         doc.text(`Estado Pedido: ${this.traducirEstadoPedido(pago.order?.status)}`, 20, 85);
-
         doc.text(`Método de Pago: ${pago.paymentMethod?.name || "-"}`, 20, 105);
         doc.text(`Monto: $${pago.total.toLocaleString()}`, 20, 115);
         doc.text(`Fecha Pago: ${this.formatDate(pago.paymentDate)}`, 20, 125);
         doc.text(`Número de Recibo: ${pago.receiptNumber}`, 20, 135);
         doc.text(`Estado Pago: ${this.traducirEstado(pago.status)}`, 20, 145);
 
-        doc.setDrawColor("#580e00");
-        doc.line(20, 150, 190, 150);
-
-        doc.setFontSize(10);
         doc.setTextColor("#580e00");
+        doc.setFontSize(10);
         doc.text("Gracias por tu compra. Smash Order", 105, 160, null, null, "center");
-
         doc.save(`comprobante_pago_${pago.receiptNumber}.pdf`);
       };
     },
 
-    buscarPorRecibo() { this.aplicarFiltros(); },
-    filtrarPorEstado() { this.aplicarFiltros(); },
-    limpiarFiltros() { this.filtroRecibo = ""; this.filtroEstado = ""; this.pagos = [...this.pagosOriginales]; },
-    aplicarFiltros() {
-      let filtrados = [...this.pagosOriginales];
-      if (this.filtroRecibo) filtrados = filtrados.filter(p => p.receiptNumber.toLowerCase().includes(this.filtroRecibo.toLowerCase()));
-      if (this.filtroEstado) filtrados = filtrados.filter(p => p.status === this.filtroEstado);
-      this.pagos = filtrados;
-    },
-
+    
+    // === PEDIDOS ===
     filtrarPedidos() {
       const busq = this.busquedaPedido.toLowerCase();
       this.resultadosPedido = this.pedidos.filter(p =>
@@ -441,7 +590,6 @@ export default {
       this.busquedaPedido = `#${pedido.id} - ${pedido.customer?.name} - Mesa ${pedido.table?.number}`;
       this.resultadosPedido = [];
     },
-
     filtrarPedidosEdit() {
       const busq = this.busquedaPedidoEdit.toLowerCase();
       this.resultadosPedidoEdit = this.pedidos.filter(p =>
@@ -455,11 +603,19 @@ export default {
       this.resultadosPedidoEdit = [];
     },
 
+    // === UTILIDADES ===
     traducirEstado(estado) {
       if (estado === "PAID") return "Pagado";
       if (estado === "PENDING") return "Pendiente";
       if (estado === "CANCELLED") return "Cancelado";
       if (estado === "REFUNDED") return "Reembolsado";
+      return estado;
+    },
+    traducirEstadoPedido(estado) {
+      if (estado === "COMPLETED") return "Completado";
+      if (estado === "PENDING") return "Pendiente";
+      if (estado === "CANCELLED") return "Cancelado";
+      if (estado === "IN_PROGRESS") return "En proceso";
       return estado;
     },
     formatDate(fecha) {
@@ -468,6 +624,7 @@ export default {
   }
 };
 </script>
+
 
 <style>
 .pagos-container {
@@ -618,15 +775,31 @@ export default {
   color: #580e00;
   margin-bottom: 1rem;
 }
-.loading-spinner {
-  text-align: center;
-  padding: 3rem 1rem;
+/* === SPINNER DE CARGA === */
+.loading-overlay {
+  position: relative;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.loading-spinner p {
-  margin-top: 1rem;
-  color: #580e00;
-  font-weight: 600;
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .modal-content {
   border-radius: 12px;
@@ -680,4 +853,54 @@ export default {
 ::-webkit-scrollbar-thumb:hover {
   background-color: #a58a86;
 }
+/* === PAGINACIÓN CORPORATIVA === */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  padding: 0.9rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.08);
+  max-width: 340px;
+  margin: 2rem auto;
+  transition: all 0.3s ease;
+}
+
+.btn-pagination {
+  background: #580e00;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(88, 14, 0, 0.2);
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #761f11;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(88, 14, 0, 0.25);
+}
+
+.btn-pagination:disabled {
+  background: #d3c5c3;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pagination-info {
+  color: #580e00;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+}
+
 </style>

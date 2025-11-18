@@ -19,8 +19,13 @@
         <!-- Buscar por número -->
         <div class="col-md-auto">
           <div class="input-group search-small">
-            <input type="number" min="1" class="form-control search-input" v-model="filtroNumero"
-              placeholder="Buscar" />
+            <input
+              type="number"
+              min="1"
+              class="form-control search-input"
+              v-model="filtroNumero"
+              placeholder="Buscar"
+            />
             <button @click="buscarPorNumero" class="btn btn-buscar">
               <i class="fas fa-search"></i>
             </button>
@@ -29,7 +34,11 @@
 
         <!-- Filtrar por estado -->
         <div class="col-md-auto">
-          <select class="form-select state-select" v-model="filtroEstado" @change="filtrarPorEstado">
+          <select
+            class="form-select state-select"
+            v-model="filtroEstado"
+            @change="() => filtrarPorEstado(0)"
+          >
             <option value="">Estados</option>
             <option value="AVAILABLE">Disponibles</option>
             <option value="OCCUPIED">Ocupadas</option>
@@ -46,15 +55,15 @@
 
         <!-- Badge resultados -->
         <div class="col-md-auto ms-auto text-end">
-          <span class="badge bg-info fs-6">{{ mesas.length }} Resultados</span>
+          <span class="badge bg-info fs-6">{{ mesas?.length || 0 }} Resultados</span>
         </div>
       </div>
     </div>
 
     <!-- TABLA MESAS -->
     <div class="mesas-table-container shadow-sm">
-      <div v-if="cargando" class="loading-spinner">
-        <div class="spinner-border text-primary" role="status">
+      <div v-if="cargando" class="loading-overlay">
+        <div class="spinner" role="status">
           <span class="visually-hidden">Cargando...</span>
         </div>
         <p>Cargando Mesas...</p>
@@ -83,10 +92,16 @@
               <td class="text-center mesa-numero">{{ m.number }}</td>
               <td class="text-center mesa-capacidad">{{ m.capacity }}</td>
               <td class="text-center">
-                <span :class="['badge fs-6',
-                  m.status === 'AVAILABLE' ? 'bg-success' :
-                    m.status === 'OCCUPIED' ? 'bg-danger' :
-                      'bg-warning']">
+                <span
+                  :class="[
+                    'badge fs-6',
+                    m.status === 'AVAILABLE'
+                      ? 'bg-success'
+                      : m.status === 'OCCUPIED'
+                      ? 'bg-danger'
+                      : 'bg-warning'
+                  ]"
+                >
                   {{ m.status }}
                 </span>
               </td>
@@ -103,10 +118,34 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- PAGINACIÓN -->
+        <nav class="d-flex justify-content-center mt-3" v-if="totalPages > 1">
+          <ul class="pagination">
+            <li class="page-item" :class="{ disabled: page === 0 }">
+              <button class="page-link" @click.prevent="cambiarPagina(page - 1)">Anterior</button>
+            </li>
+
+            <li
+              class="page-item"
+              v-for="n in totalPages"
+              :key="n"
+              :class="{ active: n - 1 === page }"
+            >
+              <button class="page-link" @click.prevent="cambiarPagina(n - 1)">
+                {{ n }}
+              </button>
+            </li>
+
+            <li class="page-item" :class="{ disabled: page === totalPages - 1 }">
+              <button class="page-link" @click.prevent="cambiarPagina(page + 1)">Siguiente</button>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
 
-    <!-- Modal Agregar -->
+   <!-- MODALES -->
     <div class="modal fade" id="modalGuardarMesa" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg">
@@ -116,11 +155,23 @@
           </div>
           <div class="modal-body">
             <label for="numeroMesaNueva" class="form-label">Número de mesa</label>
-            <input id="numeroMesaNueva" v-model.number="mesaNueva.number" type="number" min="1"
-              class="form-control mb-3" placeholder="Ej: 5" />
+            <input
+              id="numeroMesaNueva"
+              v-model.number="mesaNueva.number"
+              type="number"
+              min="1"
+              class="form-control mb-3"
+              placeholder="Ej: 5"
+            />
             <label for="capacidadMesaNueva" class="form-label">Capacidad</label>
-            <input id="capacidadMesaNueva" v-model.number="mesaNueva.capacity" type="number" min="1"
-              class="form-control mb-3" placeholder="Ej: 4 personas" />
+            <input
+              id="capacidadMesaNueva"
+              v-model.number="mesaNueva.capacity"
+              type="number"
+              min="1"
+              class="form-control mb-3"
+              placeholder="Ej: 4 personas"
+            />
           </div>
           <div class="modal-footer">
             <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -130,7 +181,6 @@
       </div>
     </div>
 
-    <!-- Modal Editar -->
     <div class="modal fade" id="modalEditarMesa" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg">
@@ -140,13 +190,29 @@
           </div>
           <div class="modal-body">
             <label for="numeroMesaEditada" class="form-label">Número de mesa</label>
-            <input id="numeroMesaEditada" v-model.number="mesaEditada.number" type="number" min="1"
-              class="form-control mb-3" placeholder="Ej: 5" />
+            <input
+              id="numeroMesaEditada"
+              v-model.number="mesaEditada.number"
+              type="number"
+              min="1"
+              class="form-control mb-3"
+              placeholder="Ej: 5"
+            />
             <label for="capacidadMesaEditada" class="form-label">Capacidad</label>
-            <input id="capacidadMesaEditada" v-model.number="mesaEditada.capacity" type="number" min="1"
-              class="form-control mb-3" placeholder="Ej: 4 personas" />
+            <input
+              id="capacidadMesaEditada"
+              v-model.number="mesaEditada.capacity"
+              type="number"
+              min="1"
+              class="form-control mb-3"
+              placeholder="Ej: 4 personas"
+            />
             <label for="estadoMesaEditada" class="form-label">Estado</label>
-            <select id="estadoMesaEditada" v-model="mesaEditada.status" class="form-select mb-3 w-75">
+            <select
+              id="estadoMesaEditada"
+              v-model="mesaEditada.status"
+              class="form-select mb-3 w-75"
+            >
               <option value="AVAILABLE">Disponible</option>
               <option value="OCCUPIED">Ocupada</option>
               <option value="RESERVED">Reservada</option>
@@ -164,11 +230,11 @@
 
 <script>
 import { mostrarAlerta, confirmar } from '@/functions.js';
-import Modal from 'bootstrap/js/dist/modal';
+import * as bootstrap from 'bootstrap';
 import {
-  getTables,
+  getTablesPaginated,
   getTableByNumber,
-  getTablesByStatus,
+  getTablesByStatusPaginated,
   getTableById,
   createTable,
   updateTable,
@@ -186,47 +252,92 @@ export default {
       modalAgregar: null,
       modalEditar: null,
       filtroNumero: '',
-      filtroEstado: ''
+      filtroEstado: '',
+      page: 0,
+      size: 3,
+      totalPages: 0
     };
   },
   mounted() {
-    this.modalAgregar = new Modal(document.getElementById('modalGuardarMesa'));
-    this.modalEditar = new Modal(document.getElementById('modalEditarMesa'));
+    this.$nextTick(() => {
+      const modalGuardar = document.getElementById('modalGuardarMesa');
+      const modalEditar = document.getElementById('modalEditarMesa');
+      if (modalGuardar) this.modalAgregar = new bootstrap.Modal(modalGuardar);
+      if (modalEditar) this.modalEditar = new bootstrap.Modal(modalEditar);
+    });
     this.obtenerMesas();
   },
   methods: {
-    async obtenerMesas() {
+    async obtenerMesas(page = 0) {
       this.cargando = true;
       try {
-        this.mesas = await getTables();
+        const data = await getTablesPaginated(page, this.size);
+        this.mesas = data.content;
+        this.totalPages = data.totalPages;
+        this.page = data.number;
       } catch {
         mostrarAlerta('Error al cargar las mesas', 'danger');
       } finally {
         this.cargando = false;
       }
     },
+
+    async filtrarPorEstado(pageOrEvent = 0) {
+      this.cargando = true;
+      try {
+        const page = typeof pageOrEvent === 'number' ? pageOrEvent : 0;
+
+        if (!this.filtroEstado) {
+          await this.obtenerMesas(page);
+          return;
+        }
+
+        const data = await getTablesByStatusPaginated(this.filtroEstado, page, this.size);
+
+        if (data && data.content) {
+          this.mesas = data.content;
+          this.totalPages = data.totalPages;
+          this.page = data.number;
+        } else {
+          this.mesas = [];
+          this.totalPages = 0;
+        }
+      } catch (e) {
+        console.error(e);
+        mostrarAlerta('Error al filtrar por estado', 'danger');
+        this.mesas = [];
+      } finally {
+        this.cargando = false;
+      }
+    },
+
+    cambiarPagina(nuevaPagina) {
+      if (nuevaPagina >= 0 && nuevaPagina < this.totalPages) {
+        if (this.filtroEstado) {
+          this.filtrarPorEstado(nuevaPagina);
+        } else {
+          this.obtenerMesas(nuevaPagina);
+        }
+      }
+    },
+
     async buscarPorNumero() {
       if (!this.filtroNumero) return this.obtenerMesas();
       try {
         const mesa = await getTableByNumber(this.filtroNumero);
         this.mesas = [mesa];
+        this.totalPages = 1;
       } catch {
         mostrarAlerta('Mesa no encontrada', 'warning');
       }
     },
-    async filtrarPorEstado() {
-      if (!this.filtroEstado) return this.obtenerMesas();
-      try {
-        this.mesas = await getTablesByStatus(this.filtroEstado);
-      } catch {
-        mostrarAlerta('Error al filtrar por estado', 'danger');
-      }
-    },
+
     limpiarFiltros() {
       this.filtroNumero = '';
       this.filtroEstado = '';
       this.obtenerMesas();
     },
+
     async guardarMesa() {
       try {
         await createTable(this.mesaNueva);
@@ -238,6 +349,7 @@ export default {
         mostrarAlerta('Error al guardar la mesa', 'danger');
       }
     },
+
     async obtenerPorId(id) {
       try {
         this.mesaEditada = await getTableById(id);
@@ -246,6 +358,7 @@ export default {
         mostrarAlerta('Error al obtener la mesa', 'danger');
       }
     },
+
     async actualizarMesa() {
       try {
         await updateTable(this.mesaEditada);
@@ -256,26 +369,25 @@ export default {
         mostrarAlerta('Error al actualizar la mesa', 'danger');
       }
     },
+
     async eliminarMesa(id) {
       try {
-        const confirmado = await confirmar(
-          "Eliminar mesa",
-          "¿Estás seguro de eliminar esta mesa?"
-        );
+        const confirmado = await confirmar('Eliminar mesa', '¿Estás seguro de eliminar esta mesa?');
         if (confirmado) {
           await deleteTable(id);
-          mostrarAlerta("Mesa eliminada correctamente", "success");
+          mostrarAlerta('Mesa eliminada correctamente', 'success');
           this.obtenerMesas();
         } else {
-          mostrarAlerta("Operación cancelada", "info");
+          mostrarAlerta('Operación cancelada', 'info');
         }
-      } catch (error) {
-        mostrarAlerta("Error al eliminar la mesa", "danger");
+      } catch {
+        mostrarAlerta('Error al eliminar la mesa', 'danger');
       }
     }
   }
 };
 </script>
+
 
 <style>
 /* === HEADER === */
@@ -287,12 +399,14 @@ export default {
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
 }
+
 .mesas-title {
   color: var(--primary-color);
   font-weight: 700;
   margin-bottom: 0.5rem;
   font-size: 2.2rem;
 }
+
 .mesas-subtitle {
   color: var(--text-light);
   font-size: 1.1rem;
@@ -316,6 +430,7 @@ export default {
   padding: 0.75rem 1.5rem;
   transition: all 0.3s ease;
 }
+
 .btn-guardar:hover {
   background-color: var(--primary-dark) !important;
   border-color: var(--primary-dark) !important;
@@ -336,6 +451,7 @@ export default {
   justify-content: center;
   transition: all 0.3s ease;
 }
+
 .btn-buscar:hover {
   background-color: var(--primary-dark);
   transform: translateY(-2px);
@@ -350,10 +466,12 @@ export default {
   box-shadow: 0 4px 12px rgba(88, 14, 0, 0.1);
   overflow: hidden;
 }
+
 .mesas-table thead {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   color: white;
 }
+
 .mesas-table th {
   font-weight: 600;
   padding: 1rem;
@@ -361,10 +479,12 @@ export default {
   font-size: 0.9rem;
   letter-spacing: 0.5px;
 }
+
 .mesa-row {
   transition: all 0.2s ease;
   border-bottom: 1px solid #eee;
 }
+
 .mesa-row:hover {
   background-color: #f8f9fa;
   transform: translateX(4px);
@@ -383,6 +503,7 @@ export default {
   padding: 3rem;
   color: var(--text-light);
 }
+
 .loading-spinner .spinner-border {
   width: 3rem;
   height: 3rem;
@@ -395,11 +516,13 @@ export default {
   padding: 3rem;
   color: var(--text-light);
 }
+
 .empty-icon {
   font-size: 4rem;
   color: #dee2e6;
   margin-bottom: 1rem;
 }
+
 .empty-state h4 {
   color: var(--text-dark);
   margin-bottom: 0.5rem;
@@ -411,11 +534,13 @@ export default {
   justify-content: center;
   gap: 0.5rem;
 }
+
 .action-buttons .btn {
   border-radius: 6px;
   padding: 0.4rem 0.8rem;
   transition: all 0.2s ease;
 }
+
 .action-buttons .btn:hover {
   transform: translateY(-2px);
 }
@@ -426,16 +551,20 @@ export default {
   border: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
+
 .modal-header {
   border-radius: 16px 16px 0 0;
   padding: 1.2rem 1.5rem;
 }
+
 .modal-title {
   font-weight: 600;
 }
+
 .modal-body {
   padding: 1.5rem;
 }
+
 .modal-footer {
   border-radius: 0 0 16px 16px;
   padding: 1.2rem 1.5rem;
@@ -446,15 +575,18 @@ export default {
   .mesas-container {
     padding: 1rem;
   }
+
   .mesas-actions {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
   }
+
   .action-buttons {
     flex-direction: column;
     gap: 0.5rem;
   }
+
   .modal-dialog {
     margin: 1rem;
   }

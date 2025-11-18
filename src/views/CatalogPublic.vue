@@ -87,13 +87,13 @@
 </template>
 
 <script>
-import { mostrarAlerta } from "@/functions.js";
+import { mostrarAlerta,validarRangoDePrecio } from "@/functions.js";
 import PublicHeader from "@/components/PublicHeader.vue";
 import {
   getProducts,
-  searchProducts,
-  filterByCategory,
-  filterByPrice,
+  searchProductsByName,
+  getProductsByCategory,
+  filterProductsByPrice,
 } from "@/services/products";
 import { getCategories } from "@/services/categories";
 
@@ -138,7 +138,7 @@ export default {
     async filtrarBusqueda() {
       if (!this.filtro.trim()) return this.obtenerProductos();
       try {
-        this.productos = await searchProducts(this.filtro);
+        this.productos = await searchProductsByName(this.filtro);
       } catch {
         mostrarAlerta("Error en la búsqueda", "danger");
       }
@@ -146,24 +146,20 @@ export default {
     async filtrarPorCategoria() {
       if (this.filtroCategoria == 0) return this.obtenerProductos();
       try {
-        this.productos = await filterByCategory(this.filtroCategoria);
+        this.productos = await getProductsByCategory(this.filtroCategoria);
       } catch {
         mostrarAlerta("Error al filtrar por categoría", "danger");
       }
     },
     async filtrarPorPrecio() {
-      if (this.precioMin == null || this.precioMax == null || this.precioMin === '' || this.precioMax === '') {
-        mostrarAlerta("Debe ingresar un precio mínimo y máximo", "warning");
-        return;
-      }
+  if (!validarRangoDePrecio(this.precioMin, this.precioMax)) return;
 
-      try {
-        this.productos = await filterByPrice(this.precioMin, this.precioMax);
-      } catch (error) {
-        console.error(error);
-        mostrarAlerta("Error al filtrar por precio", "danger");
-      }
-    },
+  try {
+    this.productos = await filterProductsByPrice(this.precioMin, this.precioMax);
+  } catch {
+    mostrarAlerta("Error", "error", "Error al filtrar por precio");
+  }
+},
     limpiarFiltros() {
       this.filtro = "";
       this.filtroCategoria = 0;

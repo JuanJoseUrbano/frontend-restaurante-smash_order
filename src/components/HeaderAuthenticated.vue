@@ -5,45 +5,44 @@
         <!-- NOMBRE DEL SISTEMA -->
         <div class="brand-section d-flex flex-column align-items-start">
           <span class="brand-main">SmashOrder</span>
-          <br>
+          <br />
           <span class="brand-sub">{{ subtitle }}</span>
         </div>
 
         <!-- BOTÓN RESPONSIVE -->
         <button
-          class="navbar-toggler"
+          class="navbar-toggler text-white border-0"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarContent"
-          aria-controls="navbarContent"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
+          @click="toggleMenu"
         >
-          <span class="navbar-toggler-icon"></span>
+          <i :class="menuOpen ? 'fas fa-times' : 'fas fa-bars'" class="fs-3"></i>
         </button>
 
         <!-- MENÚ DERECHA -->
-        <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
-          <ul class="navbar-nav align-items-center">
+        <div :class="['collapse', 'navbar-collapse', { show: menuOpen }]" id="navbarContent">
+          <ul class="navbar-nav align-items-center ms-auto text-center text-lg-start">
             <!-- USUARIO -->
-            <li class="nav-item me-4 text-end">
+            <li class="nav-item me-lg-4 mb-3 mb-lg-0 text-end text-lg-start">
               <div class="username">{{ username }}</div>
               <div class="role">{{ formattedRole }}</div>
             </li>
 
             <!-- NOTIFICACIONES -->
-            <li class="nav-item me-4 position-relative">
+            <li v-if="isCustomer" class="nav-item me-lg-4 mb-3 mb-lg-0 position-relative">
               <i class="fas fa-bell notification-icon" @click="toggleNotifications"></i>
-              <span v-if="notifications.length" class="notification-badge">{{ notifications.length }}</span>
+              <span v-if="notifications && notifications.length > 0" class="notification-badge">
+                {{ notifications.length }}
+              </span>
 
               <div v-if="showNotifications" class="notifications-dropdown shadow">
-                <div v-if="notifications.length">
+                <div v-if="notifications && notifications.length">
                   <div
-                    v-for="(notif, index) in notifications"
-                    :key="index"
+                    v-for="notif in notifications"
+                    :key="notif.id"
                     class="notification-item"
+                    @click="markAsRead(notif.id)"
                   >
-                    <i :class="notif.icon"></i>
+                    <i class="fas fa-info-circle"></i>
                     <span>{{ notif.message }}</span>
                   </div>
                 </div>
@@ -52,12 +51,16 @@
             </li>
 
             <!-- BOTONES -->
-            <li class="nav-item d-flex gap-3">
-              <router-link :to="profileRoute" class="btn btn-profile">
+            <li class="nav-item d-flex flex-column flex-lg-row gap-2 gap-lg-3">
+              <router-link
+                :to="profileRoute"
+                class="btn btn-profile"
+                @click="closeMenu"
+              >
                 <i class="fas fa-user me-1"></i> Perfil
               </router-link>
 
-              <button @click="logout" class="btn btn-logout">
+              <button @click="logoutAndClose" class="btn btn-logout">
                 <i class="fas fa-sign-out-alt me-1"></i> Salir
               </button>
             </li>
@@ -71,6 +74,7 @@
 <script>
 import { confirmar } from "@/functions";
 import { logout } from "@/services/authService";
+import { getNotificationsUnreadByCustomer, markNotificationAsRead } from "@/services/notifications";
 
 export default {
   name: "HeaderAuthenticated",
@@ -78,297 +82,164 @@ export default {
     username: { type: String, default: "Usuario" },
     roles: { type: Array, default: () => [] },
     activeRole: { type: String, default: "ROLE_CUSTOMER" },
+    userId: { type: Number, default: null },
   },
   data() {
     return {
       showNotifications: false,
       notifications: [],
+      notificationsInterval: null,
+      menuOpen: false, // 👈 control del menú responsive
     };
   },
   computed: {
     formattedRole() {
       switch (this.activeRole) {
-        case "ROLE_ADMIN":
-          return "Administrador";
-        case "ROLE_EMPLOYEE":
-          return "Empleado";
-        case "ROLE_CUSTOMER":
-          return "Cliente";
-        default:
-          return "Sin rol";
+        case "ROLE_ADMIN": return "Administrador";
+        case "ROLE_EMPLOYEE": return "Empleado";
+        case "ROLE_CUSTOMER": return "Cliente";
+        default: return "Sin rol";
       }
     },
     subtitle() {
       switch (this.activeRole) {
         case "ROLE_ADMIN":
-        case "ROLE_EMPLOYEE":
-          return "Panel de Control";
-        case "ROLE_CUSTOMER":
-          return "Menú del Cliente";
-        default:
-          return "";
+        case "ROLE_EMPLOYEE": return "Panel de Control";
+        case "ROLE_CUSTOMER": return "Menú del Cliente";
+        default: return "";
       }
     },
     profileRoute() {
       switch (this.activeRole) {
-        case "ROLE_ADMIN":
-          return "/dashboard-admin/profile";
-        case "ROLE_EMPLOYEE":
-          return "/dashboard-employee/profile";
-        case "ROLE_CUSTOMER":
-          return "/dashboard-customer/profile";
-        default:
-          return "/";
+        case "ROLE_ADMIN": return "/dashboard-admin/profile";
+        case "ROLE_EMPLOYEE": return "/dashboard-employee/profile";
+        case "ROLE_CUSTOMER": return "/dashboard-customer/profile";
+        default: return "/";
       }
+    },
+    isCustomer() {
+      return this.activeRole === "ROLE_CUSTOMER";
+    },
+    effectiveUserId() {
+      return this.userId || 6;
     },
   },
   methods: {
-    async logout() {
+    toggleMenu() {
+      this.menuOpen = !this.menuOpen;
+    },
+    closeMenu() {
+      this.menuOpen = false;
+    },
+    async logoutAndClose() {
+      this.closeMenu();
       const confirmed = await confirmar("Cerrar sesión", "¿Estás seguro de que deseas cerrar sesión?");
       if (confirmed) logout();
     },
     toggleNotifications() {
       this.showNotifications = !this.showNotifications;
     },
-    async loadNotifications() {
+    async fetchNotifications() {
+      if (!this.effectiveUserId || !this.isCustomer) return;
       try {
-        const response = await fetch("/api/notifications");
-        const data = await response.json();
-        this.notifications = data;
+        const data = await getNotificationsUnreadByCustomer(this.effectiveUserId);
+        this.notifications = Array.isArray(data) ? data : [];
       } catch (error) {
-        console.error("Error al cargar notificaciones:", error);
+        console.error("Error al obtener notificaciones:", error);
       }
+    },
+    async markAsRead(id) {
+      try {
+        await markNotificationAsRead(id);
+        this.notifications = this.notifications.filter(n => n.id !== id);
+      } catch (error) {
+        console.error("Error al marcar como leída:", error);
+      }
+    },
+    startNotificationsInterval() {
+      if (!this.notificationsInterval) {
+        this.notificationsInterval = setInterval(() => this.fetchNotifications(), 5000);
+      }
+    },
+    stopNotificationsInterval() {
+      clearInterval(this.notificationsInterval);
+      this.notificationsInterval = null;
     },
   },
   mounted() {
-    this.loadNotifications();
-    setInterval(() => this.loadNotifications(), 30000);
+    this.fetchNotifications();
+    this.startNotificationsInterval();
+  },
+  beforeUnmount() {
+    this.stopNotificationsInterval();
   },
 };
 </script>
 
 <style scoped>
-/* =============================== */
-/* NAVBAR PRINCIPAL */
-/* =============================== */
 .navbar-custom {
   background: linear-gradient(90deg, #580e00, #6d1b0c);
   color: white;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
-  height: 100px;
-  padding: 0 2rem;
   transition: all 0.3s ease;
+  padding: 0 1rem;
 }
-
-/* =============================== */
-/* NOMBRE DEL SISTEMA */
-/* =============================== */
-.brand-section {
-  line-height: 1.1;
-}
-
-.brand-main {
-  font-weight: 800;
-  font-size: 1.9rem;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
-
-.brand-sub {
-  font-size: 1rem;
-  color: #ffd8cc;
-  font-weight: 500;
-}
-
-/* =============================== */
-/* USUARIO */
-/* =============================== */
-.username {
-  font-weight: 600;
-  font-size: 1rem;
-  color: #fff;
-}
-
-.role {
-  font-size: 0.85rem;
-  color: #ffd8cc;
-}
-
-/* =============================== */
-/* BOTONES */
-/* =============================== */
+.brand-section { line-height: 1.1; }
+.brand-main { font-weight: 800; font-size: 1.9rem; color: #fff; letter-spacing: 0.5px; }
+.brand-sub { font-size: 1rem; color: #ffd8cc; font-weight: 500; }
+.username { font-weight: 600; font-size: 1rem; color: #fff; }
+.role { font-size: 0.85rem; color: #ffd8cc; }
 .btn-profile {
-  background: #fff;
-  color: #580e00;
-  border: none;
-  border-radius: 25px;
-  padding: 0.6rem 1.3rem;
-  font-weight: 600;
-  transition: 0.2s ease;
+  background: #fff; color: #580e00; border: none; border-radius: 25px;
+  padding: 0.6rem 1.3rem; font-weight: 600; transition: 0.2s ease;
 }
-
-.btn-profile:hover {
-  background: #ffd8cc;
-}
-
+.btn-profile:hover { background: #ffd8cc; }
 .btn-logout {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  border-radius: 25px;
-  padding: 0.6rem 1.3rem;
-  font-weight: 600;
-  transition: 0.2s ease;
+  background: #e74c3c; color: white; border: none; border-radius: 25px;
+  padding: 0.6rem 1.3rem; font-weight: 600; transition: 0.2s ease;
 }
-
-.btn-logout:hover {
-  background: #c0392b;
-}
-
-/* =============================== */
-/* NOTIFICACIONES */
-/* =============================== */
+.btn-logout:hover { background: #c0392b; }
 .notification-icon {
-  font-size: 1.8rem;
-  color: white;
-  cursor: pointer;
-  transition: 0.2s ease;
+  font-size: 1.8rem; color: white; cursor: pointer; transition: 0.2s ease;
 }
-
-.notification-icon:hover {
-  color: #ffd8cc;
-}
-
+.notification-icon:hover { color: #ffd8cc; }
 .notification-badge {
-  position: absolute;
-  top: -4px;
-  right: -6px;
-  background: #e74c3c;
-  color: white;
-  border-radius: 50%;
-  padding: 3px 7px;
-  font-size: 0.7rem;
-  font-weight: bold;
+  position: absolute; top: -4px; right: -6px;
+  background: #e74c3c; color: white; border-radius: 50%;
+  padding: 3px 7px; font-size: 0.7rem; font-weight: bold;
 }
-
-/* Dropdown */
 .notifications-dropdown {
-  position: absolute;
-  top: 45px;
-  right: 0;
-  background: white;
-  color: #333;
-  border-radius: 10px;
-  width: 260px;
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 0.5rem 0;
-  z-index: 999;
-  animation: fadeIn 0.2s ease-in-out;
+  position: absolute; top: 45px; right: 0;
+  background: white; color: #333; border-radius: 10px;
+  width: 260px; max-height: 300px; overflow-y: auto;
+  padding: 0.5rem 0; z-index: 999; animation: fadeIn 0.2s ease-in-out;
 }
-
 .notification-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1rem;
-  font-size: 0.9rem;
-  cursor: pointer;
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.6rem 1rem; font-size: 0.9rem; cursor: pointer;
   transition: background 0.2s ease;
 }
+.notification-item:hover { background: #ffeae4; }
+.notification-item i { color: #580e00; }
+.notification-empty { text-align: center; padding: 1rem; color: #999; font-size: 0.85rem; }
 
-.notification-item:hover {
-  background: #ffeae4;
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-.notification-item i {
-  color: #580e00;
-}
-
-.notification-empty {
-  text-align: center;
-  padding: 1rem;
-  color: #999;
-  font-size: 0.85rem;
-}
-
-/* =============================== */
-/* ANIMACIÓN SUAVE */
-/* =============================== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* =============================== */
-/* RESPONSIVE FIXES */
-/* =============================== */
-@media (max-width: 992px) {
-  .navbar-custom {
-    height: auto; /* Evita que el menú se monte */
-    padding: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .brand-section {
-    margin-bottom: 0.5rem;
-  }
-
-  .navbar-toggler {
-    border: none;
-    background-color: #ffffff33;
-  }
-
-  .navbar-toggler-icon {
-    background-image: none;
-  }
-
-  .navbar-toggler-icon::before {
-    content: "\2630"; /* icono hamburguesa */
-    font-size: 1.6rem;
-    color: #fff;
-  }
-
+/* 🔹 Ajustes responsive */
+@media (max-width: 991px) {
+  .navbar-custom { height: auto; padding: 1rem; }
   .navbar-collapse {
-    background: #580e00;
+    background: #6d1b0c;
     border-radius: 10px;
     padding: 1rem;
-    margin-top: 1rem;
-    transition: all 0.3s ease;
+    margin-top: 0.5rem;
   }
-
-  .navbar-nav {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+  .btn-profile, .btn-logout {
+    width: 100%;
   }
-
   .nav-item {
     width: 100%;
   }
-
-  .btn-profile,
-  .btn-logout {
-    width: 100%;
-    text-align: center;
-  }
-
-  .notification-icon {
-    font-size: 1.6rem;
-  }
-
-  .notifications-dropdown {
-    position: static;
-    width: 100%;
-    max-height: 200px;
-  }
 }
 </style>
-

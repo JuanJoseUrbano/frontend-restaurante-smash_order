@@ -10,6 +10,13 @@ export async function getUsers() {
   return res.data;
 }
 
+export async function getUsersPaginated(page = 0, size = 3) {
+  const res = await api.get("/users/paginated", {
+    params: { page, size },
+  });
+  return res.data;
+}
+
 export async function getUserById(id) {
   const res = await api.get(`/users/${id}`);
   return res.data;

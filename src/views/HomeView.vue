@@ -17,7 +17,7 @@
           Sitio web de comidas rápidas, principalmente hamburguesas, con un estilo moderno, llamativo y
           apetitoso, resaltando frescura y rapidez en el servicio.
         </p>
-        <router-link to="/catalogo" class="btn-order mt-3">Pedir ahora</router-link>
+        <router-link to="/catalogo" class="btn-order mt-4 mb-5">Ver catálogo</router-link>
       </div>
     </div>
   </main>
@@ -28,7 +28,7 @@ import PublicHeader from '@/components/PublicHeader.vue';
 
 export default {
   name: "HomeView",
-   components: {
+  components: {
     PublicHeader
   }
 };
@@ -39,6 +39,7 @@ export default {
   min-height: 80vh;
   display: flex;
   align-items: center;
+  margin-bottom: 4rem; /* 🔹 más espacio antes del footer */
 }
 
 .brand-image {
@@ -47,12 +48,12 @@ export default {
 }
 
 .title-text {
-  font-size: 2.5rem; /* Mucho más grande */
+  font-size: 2.5rem;
   color: #580e00;
 }
 
 .desc-text {
-  font-size: 1.3rem; /* Texto descriptivo más grande */
+  font-size: 1.3rem;
   line-height: 1.6;
   color: #580e00;
 }

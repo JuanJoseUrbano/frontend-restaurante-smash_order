@@ -11,7 +11,6 @@ api.interceptors.request.use(
     const token = localStorage.getItem("token");
     const publicEndpoints = ["/auth/login", "/auth/register"];
 
-    // Solo agregar token si la URL NO es pública
     if (token && !publicEndpoints.some(endpoint => config.url.includes(endpoint))) {
       config.headers.Authorization = token;
     } else if (!token && !publicEndpoints.some(endpoint => config.url.includes(endpoint))) {
@@ -26,11 +25,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // 🔹 Detectar fallo de conexión (backend apagado)
+   
     if (!error.response && error.request) {
       console.error("❌ No se pudo conectar con el backend");
 
-      // Limpiar datos de sesión
       localStorage.removeItem("token");
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("activeRole");
