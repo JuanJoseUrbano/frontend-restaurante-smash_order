@@ -10,15 +10,8 @@
         </div>
       </router-link>
 
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-bs-toggle="collapse"
-        data-bs-target="#navbarContent"
-        aria-controls="navbarContent"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
 
@@ -36,9 +29,10 @@
 
           <!-- Botones -->
           <li class="nav-item d-flex gap-2">
-            <router-link to="/perfil" class="btn btn-profile">
+            <router-link :to="profileRoute" class="btn btn-profile">
               <i class="fas fa-user me-1"></i> Perfil
             </router-link>
+
             <button @click="logout" class="btn btn-logout">
               <i class="fas fa-sign-out-alt me-1"></i> Salir
             </button>
@@ -51,60 +45,87 @@
 
 <script>
 import { confirmar } from "@/functions";
-import { logout} from "@/services/authService";
+import { logout } from "@/services/authService";
+
 export default {
   name: "HeaderAuthenticated",
   props: {
     username: {
       type: String,
-      default: "Usuario"
+      default: "Usuario",
     },
     roles: {
       type: Array,
-      default: () => []
+      default: () => [],
     },
     activeRole: {
       type: String,
-      default: "ROLE_CUSTOMER"
-    }
+      default: "ROLE_CUSTOMER",
+    },
   },
   computed: {
     formattedRole() {
       switch (this.activeRole) {
-        case "ROLE_ADMIN": return "Administrador";
-        case "ROLE_EMPLOYEE": return "Empleado";
-        case "ROLE_CUSTOMER": return "Cliente";
-        default: return "Sin rol";
+        case "ROLE_ADMIN":
+          return "Administrador";
+        case "ROLE_EMPLOYEE":
+          return "Empleado";
+        case "ROLE_CUSTOMER":
+          return "Cliente";
+        default:
+          return "Sin rol";
       }
     },
     dashboardRoute() {
-      // Redirige al dashboard correspondiente según el rol activo
       switch (this.activeRole) {
-        case "ROLE_ADMIN": return "/dashboard";
-        case "ROLE_EMPLOYEE": return "/employee";
-        case "ROLE_CUSTOMER": return "/menu";
-        default: return "/";
+        case "ROLE_ADMIN":
+          return "/dashboard-admin";
+        case "ROLE_EMPLOYEE":
+          return "/dashboard-employee";
+        case "ROLE_CUSTOMER":
+          return "/dashboard-customer";
+        default:
+          return "/";
       }
     },
     subtitle() {
       switch (this.activeRole) {
-        case "ROLE_ADMIN": 
-        case "ROLE_EMPLOYEE": return "Panel de Control";
-        case "ROLE_CUSTOMER": return "Menú del Cliente";
-        default: return "";
+        case "ROLE_ADMIN":
+        case "ROLE_EMPLOYEE":
+          return "Panel de Control";
+        case "ROLE_CUSTOMER":
+          return "Menú del Cliente";
+        default:
+          return "";
       }
-    }
+    },
+    profileRoute() {
+      switch (this.activeRole) {
+        case "ROLE_ADMIN":
+          return "/dashboard-admin/profile";
+        case "ROLE_EMPLOYEE":
+          return "/dashboard-employee/profile";
+        case "ROLE_CUSTOMER":
+          return "/dashboard-customer/profile";
+        default:
+          return "/";
+      }
+    },
   },
   methods: {
     async logout() {
-      const confirmed = await confirmar("Cerrar sesión", "¿Estás seguro de que deseas cerrar sesión?");
+      const confirmed = await confirmar(
+        "Cerrar sesión",
+        "¿Estás seguro de que deseas cerrar sesión?"
+      );
       if (confirmed) {
         logout();
       }
-    }
-  }
+    },
+  },
 };
 </script>
+
 
 <style scoped>
 .navbar-custom {

@@ -39,3 +39,13 @@ export async function countAllUsers() {
   const response = await api.get("/users/count");
   return response.data;
 }
+
+export async function updateProfile(user) {
+  const res = await api.put(`/users/me`, user);
+  return res.data;
+}
+
+export async function getProfile() {
+  const res = await api.get("/users/me");
+  return res.data;
+}
