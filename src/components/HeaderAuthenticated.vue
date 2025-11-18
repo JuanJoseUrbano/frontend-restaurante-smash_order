@@ -50,6 +50,8 @@
 </template>
 
 <script>
+import { confirmar } from "@/functions";
+import { logout} from "@/services/authService";
 export default {
   name: "HeaderAuthenticated",
   props: {
@@ -94,10 +96,10 @@ export default {
     }
   },
   methods: {
-    logout() {
-      if (confirm("¿Deseas cerrar sesión?")) {
-        localStorage.clear();
-        this.$router.push("/login");
+    async logout() {
+      const confirmed = await confirmar("Cerrar sesión", "¿Estás seguro de que deseas cerrar sesión?");
+      if (confirmed) {
+        logout();
       }
     }
   }
@@ -107,7 +109,6 @@ export default {
 <style scoped>
 .navbar-custom {
   background-color: #580e00;
-  /* Igual que el footer */
   color: #ffffff;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);

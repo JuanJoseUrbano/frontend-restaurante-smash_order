@@ -31,3 +31,8 @@ export async function updateReservation(reserva) {
 export async function deleteReservation(id) {
     return await api.delete(`/reservations/${id}`);
 }
+
+export async function countActiveReservationsByCustome(id) {
+  const response = await api.get(`/reservations/active/count/customer/${id}`);
+  return response.data;
+}

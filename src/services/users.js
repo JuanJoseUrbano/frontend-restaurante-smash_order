@@ -1,13 +1,7 @@
 import api from "./api";
 
-export async function loginUser(credentials) {
-  const res = await api.post("/users/login", credentials);
-  return res.data; // devolvemos SOLO los datos del usuario
-}
-
-
 export async function registerUser(user) {
-  const res = await api.post("/users", user);
+  const res = await api.post("/auth/register", user);
   return res.data;
 }
 
@@ -39,4 +33,9 @@ export async function deleteUser(id) {
 export async function getUserByEmail(email) {
   const res = await api.get(`/users/email/${email}`);
   return res.data;
+}
+
+export async function countAllUsers() {
+  const response = await api.get("/users/count");
+  return response.data;
 }
