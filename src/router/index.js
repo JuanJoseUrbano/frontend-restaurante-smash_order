@@ -21,6 +21,8 @@ import Notifications from "@/views/Notifications.vue";
 import OrderHistory from "@/views/OrderHistory.vue";
 import UserProfile from "@/views/UserProfile.vue";
 import CatalogPublic from "@/views/CatalogPublic.vue";
+import ForgotPassword from "@/views/ForgotPassword.vue";
+import ResetPassword from "@/views/ResetPassword.vue";
 
 const routes = [
   { path: "/", redirect: "/home" },
@@ -30,6 +32,8 @@ const routes = [
   { path: "/signin", component: SignIn },
   { path: "/select-role", component: SelectRolePage },
   { path: "/catalogo", component: CatalogPublic },
+  { path: "/forgot-password", name: "forgot-password", component: ForgotPassword },
+  { path: "/reset-password/:token", name: "reset-password", component: ResetPassword, props: true },
   
 
   // Dashboard Admin
