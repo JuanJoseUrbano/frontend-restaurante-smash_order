@@ -3,7 +3,9 @@ import router from "@/router";
 import { mostrarAlerta } from "@/functions";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/smash-order/api",
+  // Use VUE_APP_API_URL (set to '/smash-order' in .env) so dev-server proxy handles CORS
+  baseURL: (process.env.VUE_APP_API_URL || "/smash-order") + "/api",
+  timeout: process.env.VUE_APP_API_TIMEOUT || 30000,
 });
 
 api.interceptors.request.use(
@@ -12,10 +14,18 @@ api.interceptors.request.use(
     const publicEndpoints = ["/auth/login", "/auth/register"];
 
     // Solo agregar token si la URL NO es pública
-    if (token && !publicEndpoints.some(endpoint => config.url.includes(endpoint))) {
+    if (
+      token &&
+      !publicEndpoints.some((endpoint) => config.url.includes(endpoint))
+    ) {
       config.headers.Authorization = token;
-    } else if (!token && !publicEndpoints.some(endpoint => config.url.includes(endpoint))) {
-      console.warn("No se encontró token en localStorage al enviar la petición");
+    } else if (
+      !token &&
+      !publicEndpoints.some((endpoint) => config.url.includes(endpoint))
+    ) {
+      console.warn(
+        "No se encontró token en localStorage al enviar la petición"
+      );
     }
 
     return config;
@@ -57,11 +67,17 @@ api.interceptors.response.use(
 
       const token = localStorage.getItem("token");
       if (token) {
-        console.warn("Token presente; posible error temporal del backend, no cerrar sesión");
+        console.warn(
+          "Token presente; posible error temporal del backend, no cerrar sesión"
+        );
         return Promise.reject(error);
       }
 
-      await mostrarAlerta("Sesión expirada", "warning", "Tu sesión ha caducado. Inicia sesión nuevamente.");
+      await mostrarAlerta(
+        "Sesión expirada",
+        "warning",
+        "Tu sesión ha caducado. Inicia sesión nuevamente."
+      );
 
       localStorage.removeItem("token");
       localStorage.removeItem("isAuthenticated");
@@ -69,7 +85,8 @@ api.interceptors.response.use(
 
       router.push("/login");
     } else if (error.response && error.response.status >= 400) {
-      const mensaje = error.response.data?.message || "Ocurrió un error inesperado";
+      const mensaje =
+        error.response.data?.message || "Ocurrió un error inesperado";
       mostrarAlerta("Error", "error", mensaje);
     }
 
