@@ -1,9 +1,4 @@
 <template>
-  <div class="text-end mt-3 me-3" v-if="roles.length > 1">
-    <button class="btn btn-outline-dark btn-sm" @click="cambiarRol">
-      <i class="fas fa-exchange-alt me-1"></i> Cambiar Rol
-    </button>
-  </div>
 
   <div class="catalogo-container">
     <!-- HEADER -->
